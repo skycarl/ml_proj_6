@@ -1,2 +1,2 @@
-# ml_proj_6
-Machine Learning project 6
+# Introduction to Machine Learning Project 6
+Reinforcement learning: Value Iteration, SARSA, and Q-learning on the racetrack problem
