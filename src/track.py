@@ -127,6 +127,8 @@ class Track():
             # Check that the location is valid
             assert type(car) == tuple, 'Location must be a tuple'
             assert len(car) == 2, 'Car location length invalid'
+            assert car[0] < self.dims[0], 'Car row invalid'
+            assert car[1] < self.dims[1], 'Car column invalid'
 
             track_car = deepcopy(self.track)
 
@@ -144,3 +146,27 @@ class Track():
             [print(row) for row in track_car]
         else:
             [print(row) for row in self.track]
+
+    def get_point(self, point):
+        """Gets the character living at a provided point
+
+        Parameters
+        ----------
+        point : tuple
+            Tuple containing (row, col) to look up in the track
+
+        Returns
+        -------
+        string
+            Character at the provided point
+        """
+
+        # Check that the location is valid
+        assert type(point) == tuple, 'Location must be a tuple'
+        assert len(point) == 2, 'Point length invalid'
+        assert point[0] < self.dims[0], 'Point row invalid'
+        assert point[1] < self.dims[1], 'Point column invalid'
+        assert point[0] > 0, 'Row cannot be less than 0'
+        assert point[1] > 0, 'Column cannot be less than 0'
+
+        return self.track[point[0]][point[1]]
