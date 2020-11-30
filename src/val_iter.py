@@ -13,10 +13,14 @@ class ValueIteration():
 
     Attributes
     ----------
+    verbose : bool
+        Verbosity switch
 
     Methods
     -------
+    train()
 
+    race()
     """
 
     def __init__(self, verbose=False):
@@ -135,7 +139,39 @@ class ValueIteration():
 
         return crossed
 
-    def __nearest_track_point(self, point, trajec):
+    def __nearest_point(self, point):
+        """Finds the nearest track point with a circular search
+
+        Parameters
+        ----------
+        point : tuple
+            Point to search near
+        """
+
+        nearest = None
+        found = False
+        rad = 0
+
+        while not found:
+            rad += 1
+
+            # Generate possibilities
+            poss = (-rad, rad)
+            circle = list(product(poss, repeat=2))
+
+            # Search the possibilities
+            for pt in circle:
+                cand_pt = [sum(x) for x in zip(pt, point)]
+
+                if self.track.get_point(cand_pt) == '.':
+                    nearest = pt
+                    found = True
+                    break
+
+        assert nearest is not None, 'Could not find track point'
+        return nearest
+
+    def __nearest_point_along_traj(self, point, trajec):
         """Finds the nearest track point to the passed point, along the
         specified trajectory; this is to prevent "cheating"
 
@@ -153,14 +189,30 @@ class ValueIteration():
             Nearest point on the track
         """
 
-        pt = None
+        nearest = None
 
         for pt in trajec:
-            if self.track.get_point(pt) == '.':
+            # If an invalid point is provided (i.e. off the track),
+            # return the original point
+            if pt[0] < 0 or pt[1] < 0:
+                nearest = trajec[0]
                 break
 
-        assert pt is not None, 'Something very strange happened'
-        return pt
+            if point[0] >= self.track.dims[0] or point[1] >= self.track.dims[1]:
+                nearest = trajec[0]
+                break
+
+            # Otherwise, find the nearest track point
+            if self.track.get_point(pt) == '.':
+                nearest = pt
+                break
+
+        # Fall back to a circular search (i.e. not along the trajectory) if
+        # no track point is found
+        if nearest is None:
+            nearest = self.__nearest_point(point)
+
+        return nearest
 
     def __generate_action(self, pt, vel, accel, race=False):
         """Generates an action based on an initial passed point
@@ -229,7 +281,7 @@ class ValueIteration():
 
         converged = False
         t = 0
-        last_point = self.track.start
+        # last_point = self.track.start
 
         while not converged:
             t += 1
@@ -288,7 +340,7 @@ class ValueIteration():
                                         pos_new = self.track.start
                                     else:
                                         traj = self.__get_trajectory(pos, pos_new)
-                                        pos_new = self.__nearest_track_point(pos_new, traj)
+                                        pos_new = self.__nearest_point_along_traj(pos_new, traj)
 
                                 # Outcome 2: it crosses the finish line
                                 elif self.__check_trajectory(pos, pos_new, 'F'):
@@ -317,15 +369,13 @@ class ValueIteration():
                             v[loc] = q_s_a[loc_q]
 
             # Check if converged
-            delta_v = np.max(np.abs(v - v_last))
-            if delta_v < self.tol:
-                if self.verbose:
-                    print('Stopped because training converged')
+            max_delta_v = np.max(np.abs(v - v_last))
+            if max_delta_v < self.tol:
+                print('Stopped because training converged')
                 converged = True
 
             if t >= self.max_iter:
-                if self.verbose:
-                    print(f'Stopped; max iters of {self.max_iter} reached')
+                print(f'Stopped; max iters of {self.max_iter} reached')
                 converged = True
 
         return policy
