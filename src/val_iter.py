@@ -163,7 +163,16 @@ class ValueIteration():
             for pt in circle:
                 cand_pt = [sum(x) for x in zip(pt, point)]
 
-                if self.track.get_point(cand_pt) == '.':
+                # Ignore points outside the track
+                if cand_pt[0] < 0 or cand_pt[1] < 0:
+                    continue
+
+                if cand_pt[0] >= self.track.dims[0] or cand_pt[1] > self.track.dims[1]:
+                    continue
+
+                pt_tup = (cand_pt[0], cand_pt[1])
+
+                if self.track.get_point(pt_tup) == '.':
                     nearest = pt
                     found = True
                     break
