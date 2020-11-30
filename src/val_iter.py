@@ -1,5 +1,7 @@
 """Implements the Value Iteration algorithm."""
 
+from copy import deepcopy
+import os
 import numpy as np
 from itertools import product
 from bresenham import bresenham
@@ -67,7 +69,6 @@ class ValueIteration():
     def __get_trajectory(self, point1, point2):
         """Gets a trajectory for a given point ('#' for a crash or 'F' for
         crossing the finish line). Uses Bresenham's line generation algorithm;
-        adapted from
         https://www.geeksforgeeks.org/bresenhams-line-generation-algorithm/.
 
         Parameters
@@ -84,33 +85,15 @@ class ValueIteration():
             List of tuples of the trajectory
         """
 
-        crossed = False
-
         # Check points are good
         assert type(point1) == tuple, 'Location must be a tuple'
         assert len(point1) == 2, 'Location length invalid'
         assert type(point2) == tuple, 'Location must be a tuple'
         assert len(point2) == 2, 'Location length invalid'
 
-        # Generate points along the way with Bresenham's algorithm
-        m_new = 2 * (point2[0] - point1[0])
-        m_err_new = m_new - (point2[1] - point1[1])
+        return list(bresenham(point1[0], point1[1], point2[0], point2[1]))
 
-        y = point1[0]
-        trajec = []
-        for x in range(point1[1], point2[1]+1):
-
-            point = (y, x)
-            trajec.append(point)
-            m_err_new = m_err_new + m_new
-
-            if m_err_new >= 0:
-                y += 1
-                m_err_new = m_err_new - 2 * (point2[1] - point1[1])
-
-        return trajec
-
-    def __check_trajectory(self, point1, point2, pt_type=None):
+    def __check_trajectory(self, point1, point2, pt_type):
         """Checks a trajectory for a given point ('#' for a crash or 'F' for
         crossing the finish line).
 
@@ -135,11 +118,12 @@ class ValueIteration():
         crossed = False
 
         # Check if we've exceeded the bounds of the track accidentally
-        if point2[0] > self.track.dims[0] or point2[1] > self.track.dims[1]:
-            return True
+        if pt_type == '#':
+            if point2[0] > self.track.dims[0] or point2[1] > self.track.dims[1]:
+                return True
 
-        if point2[0] < 0 or point2[1] < 0:
-            return True
+            if point2[0] < 0 or point2[1] < 0:
+                return True
 
         trajec = self.__get_trajectory(point1, point2)
 
@@ -178,7 +162,7 @@ class ValueIteration():
         assert pt is not None, 'Something very strange happened'
         return pt
 
-    def __generate_action(self, pt, vel, accel):
+    def __generate_action(self, pt, vel, accel, race=False):
         """Generates an action based on an initial passed point
 
         Parameters
@@ -192,6 +176,9 @@ class ValueIteration():
         accel : np.array
             Acceleration (y_acc, x_acc)
 
+        race : bool
+            Whether we're in racing mode; if so, actions may fail
+
         Returns
         -------
         tuple
@@ -199,7 +186,7 @@ class ValueIteration():
         """
 
         # The acceleration action may fail
-        if self.accel_succ_prob < np.random.random():
+        if race and (self.accel_succ_prob < np.random.random()):
             return pt
 
         # Generate velocity subject to limits
@@ -233,8 +220,9 @@ class ValueIteration():
             Policy found by Value Iteration
         """
 
-        # Initialize states to zeros
+        # Initialize v and pi to zeros
         v = self.__init_states()
+        policy = self.__init_states()
 
         # Initialize Q(s, a)
         q_s_a = self.__init_q()
@@ -245,8 +233,10 @@ class ValueIteration():
 
         while not converged:
             t += 1
+            v_last = deepcopy(v)
 
             if self.verbose:
+                os.system('clear')
                 print(f'Time = {t}\n')
                 self.track.show()
 
@@ -255,42 +245,90 @@ class ValueIteration():
                 for x_pos in range(v.shape[1]):
                     for y_vel in self.velocity_range:
                         for x_vel in self.velocity_range:
+                            loc = (y_pos, x_pos, y_vel, x_vel)
 
+                            """
                             # Is this right?
                             curr_point = (y_pos, x_pos)
 
                             # Check if we've crashed
-                            # TODO Is this the right spot for this?                            
+                            # TODO Is this the right spot for this?
                             if self.__check_trajectory(last_point,
                                                        curr_point,
                                                        '#'):
-                                v[y_pos][x_pos][y_vel][x_vel] = self.crash_cost
+                                v[loc] = self.crash_cost
 
                             # Check if we've crossed the finish line
                             if self.__check_trajectory(last_point,
                                                        curr_point,
                                                        'F'):
-                                v[y_pos][x_pos][y_vel][x_vel] = self.fin_cost
+                                v[loc] = self.fin_cost
+                            """
+
+                            # Get the value of the current location
+                            # for usage later
+                            val_fail = v[loc]
 
                             # For all a in A:
-                            for idx_act, accel in enumerate(self.poss_actions):
+                            for idx_act, accel in enumerate(self.poss_actions):                                
 
                                 # Generate an action
                                 pos = (y_pos, x_pos)
                                 vel = (y_vel, x_vel)
-                                point = self.__generate_action(pos, vel, accel)
+                                pos_new = self.__generate_action(pos, vel, accel)
 
+                                # See what this action causes
+                                # Outcome 1: it crashes
+                                if self.__check_trajectory(pos, pos_new, '#'):
+                                    rew = self.crash_cost
+                                    vel = (0, 0)
 
+                                    # Crash behavior depends on parameter
+                                    if self.bad_crash:
+                                        pos_new = self.track.start
+                                    else:
+                                        traj = self.__get_trajectory(pos, pos_new)
+                                        pos_new = self.__nearest_track_point(pos_new, traj)
 
-                                # q_s_a[y_pos][x_pos][y_vel][x_vel][idx_act] = rew + (self.gamma * expected_value)
+                                # Outcome 2: it crosses the finish line
+                                elif self.__check_trajectory(pos, pos_new, 'F'):
+                                    rew = self.fin_cost
 
+                                # Outcome 3: it lands on the track
+                                else:
+                                    rew = self.track_cost
 
+                                # Get the values associated with the possible
+                                # outcome, if it succeeds
+                                loc_new = (pos_new[0], pos_new[1], y_vel, x_vel)
+                                val_succ = v[loc_new]
 
+                                # Calculate the expected value
+                                exp_val = (self.accel_succ_prob * val_succ) + (((1-self.accel_succ_prob)) * (val_fail))
 
+                                # Get Q(s, a)
+                                loc_act = (y_pos, x_pos, y_vel, x_vel, idx_act)
+                                q_s_a[loc_act] = rew + (self.gamma * exp_val)
 
-                            # last_point = (y_pos, x_pos)
+                            # Find the best Q
+                            pi_loc = np.argmax(q_s_a[loc])
+                            policy[loc] = pi_loc
+                            loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
+                            v[loc] = q_s_a[loc_q]
 
-        return # policy
+            # Check if converged
+            delta_v = np.max(np.abs(v - v_last))
+            if delta_v < self.tol:
+                if self.verbose:
+                    print('Stopped because training converged')
+                converged = True
+
+            if t >= self.max_iter:
+                if self.verbose:
+                    print(f'Stopped; max iters of {self.max_iter} reached')
+                converged = True
+
+        return policy
 
     def train(self,
               track,
@@ -302,6 +340,8 @@ class ValueIteration():
               crash_cost=5,
               track_cost=1,
               fin_cost=0,
+              max_iter=5,
+              tol=0.001,
               vis=True):
         """Develops a policy with the Value Iteration algorithm
 
@@ -335,6 +375,12 @@ class ValueIteration():
         fin_cost : int
             Cost for crossing finish line; default 0
 
+        max_iter : int
+            Maximum number of iterations
+
+        tol : float
+            Tolerance for stopping
+
         vis : bool
             Whether to visualize the track in the console
         """
@@ -347,6 +393,8 @@ class ValueIteration():
         self.vis = vis
         self.crash_cost = crash_cost
         self.track_cost = track_cost
+        self.max_iter = max_iter
+        self.tol = tol
         self.fin_cost = fin_cost
 
         assert gamma >= 0 and gamma < 1, 'Discount rate must be between 0 and 1'
