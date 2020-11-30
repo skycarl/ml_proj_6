@@ -2,8 +2,8 @@
 
 import re
 import numpy as np
-import sys
 from copy import deepcopy
+
 
 class Track():
     """Class for racetrack.
@@ -24,6 +24,17 @@ class Track():
 
     Methods
     -------
+    get_start_line()
+        Gets the starting line of the track denoted by 'S'
+
+    get_finish_line()
+        Gets the finish line of the track denoted by 'F'
+
+    show()
+        Prints the track
+
+    get_point()
+        Returns the char at a specified point
 
     """
 
@@ -121,8 +132,6 @@ class Track():
             Location of car (row, col), by default None
         """
 
-        sys.stdout.flush()
-
         if car is not None:
             # Check that the location is valid
             assert type(car) == tuple, 'Location must be a tuple'
@@ -166,7 +175,7 @@ class Track():
         assert len(point) == 2, 'Point length invalid'
         assert point[0] < self.dims[0], 'Point row invalid'
         assert point[1] < self.dims[1], 'Point column invalid'
-        assert point[0] > 0, 'Row cannot be less than 0'
-        assert point[1] > 0, 'Column cannot be less than 0'
+        assert point[0] >= 0, 'Row cannot be less than 0'
+        assert point[1] >= 0, 'Column cannot be less than 0'
 
         return self.track[point[0]][point[1]]
