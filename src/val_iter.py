@@ -31,8 +31,8 @@ class ValueIteration():
                  velocity_range=(-5, 5),
                  accel_succ_prob=0.8,
                  accel=[-1, 0, 1],
-                 crash_cost=10,
-                 track_cost=1,
+                 crash_cost=-10,
+                 track_cost=-1,
                  fin_cost=0,
                  max_iter=50,
                  tol=0.001,
@@ -238,9 +238,11 @@ class ValueIteration():
         while not found:
             rad += 1
 
-            # Generate possibilities
+            # Generate possibilities in random order to reduce the chances
+            # of getting stuck
             poss = (-rad, rad)
             circle = list(product(poss, repeat=2))
+            np.random.shuffle(circle)
 
             # Search the possibilities
             for pt in circle:
@@ -385,7 +387,7 @@ class ValueIteration():
             v_last = deepcopy(v)
 
             if self.verbose:
-                #os.system('clear')
+                # os.system('clear')
                 print(f'\nEpoch = {t}')
                 # self.track.show()
 
@@ -419,14 +421,16 @@ class ValueIteration():
                             val_fail = v[loc]
 
                             # For all a in A:
-                            for idx_act, accel in enumerate(self.poss_actions):                                
+                            for idx_act, accel in enumerate(self.poss_actions):
 
                                 # Generate an action
                                 pos = (y_pos, x_pos)
                                 vel = (y_vel, x_vel)
-                                action = self.__generate_action(pos, vel, accel)
+                                action = self.__generate_action(
+                                    pos, vel, accel)
                                 pos_new = action[0:2]
-                                vel_new = action[2:4] # TODO this isn't being used in training... should it?
+                                # TODO this isn't being used in training... should it?
+                                vel_new = action[2:4]
 
                                 # See what this action causes
                                 # Outcome 1: it crashes
@@ -438,8 +442,11 @@ class ValueIteration():
                                     if self.bad_crash:
                                         pos_new = self.track.start
                                     else:
-                                        traj = self.__get_trajectory(pos, pos_new)
-                                        pos_new = self.__nearest_point_along_traj(pos_new, traj)
+                                        traj = self.__get_trajectory(
+                                            pos, pos_new)
+                                        # pos_new = self.__nearest_point_along_traj(
+                                        #    pos_new, traj) # TODO testing this
+                                        pos_new = self.__nearest_point(pos_new)
 
                                 # Outcome 2: it crosses the finish line
                                 elif self.__check_trajectory(pos, pos_new, 'F'):
@@ -451,11 +458,13 @@ class ValueIteration():
 
                                 # Get the values associated with the possible
                                 # outcome, if it succeeds
-                                loc_new = (pos_new[0], pos_new[1], y_vel, x_vel)
+                                loc_new = (
+                                    pos_new[0], pos_new[1], y_vel, x_vel)
                                 val_succ = v[loc_new]
 
                                 # Calculate the expected value
-                                exp_val = (self.accel_succ_prob * val_succ) + (((1-self.accel_succ_prob)) * (val_fail))
+                                exp_val = (self.accel_succ_prob * val_succ) + \
+                                    (((1-self.accel_succ_prob)) * (val_fail))
 
                                 # Get Q(s, a)
                                 loc_act = (y_pos, x_pos, y_vel, x_vel, idx_act)
@@ -486,8 +495,6 @@ class ValueIteration():
 
     def train(self):
         """Develops a policy with the Value Iteration algorithm
-
-        
         """
 
         # Generate the set of possible acceleration actions in all directions
@@ -496,8 +503,6 @@ class ValueIteration():
         self.policy = self.__value_iteration()
 
         return self.policy
-
-
 
     def race(self, policy=None):
         """Runs a time trial with the trained policy
@@ -531,7 +536,7 @@ class ValueIteration():
                 os.system('clear')
                 print(f'Step: {steps}')
                 self.track.show(pos)
-                time.sleep(0.2)
+                # time.sleep(0.05)
 
             # Get the acceleration
             acc = self.policy[pos + vel]
@@ -544,12 +549,13 @@ class ValueIteration():
             crashed = self.__check_trajectory(pos, new_pos[0:2], '#')
 
             # Reset, if crashed
-            if crashed:
+            if crashed and not finished:
                 if self.bad_crash:
                     pos = self.track.start
                 else:
-                    traj = self.__get_trajectory(pos, new_pos[0:2])
-                    pos = self.__nearest_point_along_traj(pos, traj)
+                    # traj = self.__get_trajectory(pos, new_pos[0:2])
+                    # pos = self.__nearest_point_along_traj(pos, traj)
+                    pos = self.__nearest_point(pos)
 
                 vel = (0, 0)
 
@@ -560,13 +566,13 @@ class ValueIteration():
                 assert pos[0] >= 0, 'Row cannot be less than 0'
                 assert pos[1] >= 0, 'Column cannot be less than 0'
 
-
-
             # TODO: did I miss storing the velocity during training?
+
+        if self.vis:
+            os.system('clear')
+            self.track.show(pos)
 
         if self.verbose:
             print(f'\nTime trial completed in {steps} steps')
 
         return steps
-
-    
