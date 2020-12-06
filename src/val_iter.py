@@ -111,10 +111,13 @@ class ValueIteration():
             Shape is (rows, cols, velocity_range, velocity_range)
         """
 
-        #states = np.zeros((self.track.dims[0],
-        #                   self.track.dims[1],
-        #                   len(self.velocity_range),
-        #                   len(self.velocity_range)))
+        """
+        states = np.zeros((self.track.dims[0],
+                           self.track.dims[1],
+                           len(self.velocity_range),
+                           len(self.velocity_range)))
+        """
+        
         states = np.random.random((self.track.dims[0],
                            self.track.dims[1],
                            len(self.velocity_range),
@@ -149,7 +152,6 @@ class ValueIteration():
             Empty Q(s, a) array; shape is (rows, cols, velocity_range,
             velocity_range, possible acceleration options)
         """
-
         """
         q_s_a = np.empty((self.track.dims[0],
                           self.track.dims[1],
@@ -162,7 +164,7 @@ class ValueIteration():
                           len(self.velocity_range),
                           len(self.velocity_range),
                           len(self.poss_actions)))
-
+        
         return q_s_a
 
     def __get_trajectory(self, point1, point2):
@@ -427,14 +429,22 @@ class ValueIteration():
             # For all s in S
             for y_pos in range(v.shape[0]):
                 for x_pos in range(v.shape[1]):
+
+                    # Fill wall points with crash cost
+                    if self.track.get_point((y_pos, x_pos)) == '#':
+                        v[y_pos, x_pos, :, :] = self.crash_cost
+                        continue
+
                     for y_vel in self.velocity_range:
                         for x_vel in self.velocity_range:
                             loc = (y_pos, x_pos, y_vel, x_vel)
 
+                            """
                             # Fill wall points with crash cost
                             if self.track.get_point((y_pos, x_pos)) == '#':
                                 v[loc] = self.crash_cost
                                 continue  # TODO refactor this to put in 2nd loop down
+                            """
 
                             # Get the value of the current location
                             # for usage later
