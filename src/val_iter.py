@@ -5,6 +5,7 @@ import os
 import numpy as np
 from itertools import product
 from bresenham import bresenham
+import time
 
 
 class ValueIteration():
@@ -23,17 +24,82 @@ class ValueIteration():
     race()
     """
 
-    def __init__(self, verbose=False):
+    def __init__(self,
+                 track,
+                 gamma,
+                 bad_crash=False,
+                 velocity_range=(-5, 5),
+                 accel_succ_prob=0.8,
+                 accel=[-1, 0, 1],
+                 crash_cost=10,
+                 track_cost=1,
+                 fin_cost=0,
+                 max_iter=50,
+                 tol=0.001,
+                 vis=True,
+                 verbose=True):
         """Initializes an object.
 
         Parameters
         ----------
-        verbose : bool
+        track : Track
+            Track to train on
+
+        gamma : float
+            Discount rate
+
+        bad_crash : bool, optional
+            Whether to return to starting line when a crash
+            occurs, by default False
+
+        velocity_range : tuple, optional
+            Limits for velocity, by default (-5, 5)
+
+        accel_succ_prob : float, optional
+            Probability that an acceleration will succeed, by default 0.8
+
+        accel : list
+            Acceptable acceleration options
+
+        crash_cost : int
+            Cost for crashing; default 5
+
+        track_cost : int
+            Cost for moving; default 1
+
+        fin_cost : int
+            Cost for crossing finish line; default 0
+
+        max_iter : int
+            Maximum number of iterations
+
+        tol : float
+            Tolerance for stopping
+
+        vis : bool
+            Whether to visualize the track in the console
+
+        verbose: bool
             Verbosity switch
 
         """
 
+        self.track = track
+        self.bad_crash = bad_crash
+        self.velocity_range = range(velocity_range[0], velocity_range[1]+1)
+        self.accel_succ_prob = accel_succ_prob
+        self.accel = accel
+        self.vis = vis
+        self.crash_cost = crash_cost
+        self.track_cost = track_cost
+        self.max_iter = max_iter
+        self.tol = tol
+        self.fin_cost = fin_cost
         self.verbose = verbose
+        self.policy = None
+
+        assert gamma >= 0 and gamma < 1, 'Discount rate must be between 0 and 1'
+        self.gamma = gamma
 
     def __init_states(self):
         """Initialize the states to arbitrary (zero) values. States are
@@ -51,6 +117,23 @@ class ValueIteration():
                            len(self.velocity_range)))
 
         return states
+
+    def __init_policy(self):
+        """Initialize the policy to arbitrary (zero) values. States are
+        position (x, y) and velocity at each position (v_x, v_y)
+
+        Returns
+        -------
+        np.array
+            Shape is (rows, cols, velocity_range, velocity_range, 2)
+        """
+
+        pol = np.zeros((self.track.dims[0],
+                        self.track.dims[1],
+                        len(self.velocity_range),
+                        len(self.velocity_range)), dtype=(int, 2))
+
+        return pol
 
     def __init_q(self):
         """Initializes Q(s, a) of empty values
@@ -173,7 +256,7 @@ class ValueIteration():
                 pt_tup = (cand_pt[0], cand_pt[1])
 
                 if self.track.get_point(pt_tup) == '.':
-                    nearest = pt
+                    nearest = (cand_pt[0], cand_pt[1])
                     found = True
                     break
 
@@ -200,7 +283,7 @@ class ValueIteration():
 
         nearest = None
 
-        for pt in trajec:
+        for pt in reversed(trajec):
             # If an invalid point is provided (i.e. off the track),
             # return the original point
             if pt[0] < 0 or pt[1] < 0:
@@ -217,8 +300,10 @@ class ValueIteration():
                 break
 
         # Fall back to a circular search (i.e. not along the trajectory) if
-        # no track point is found
-        if nearest is None:
+        # no track point is found (for the case where the trajectory is
+        # completely inside of the wall points while training) or if the
+        # discovered point is the original point itself
+        if nearest is None or nearest == point:
             nearest = self.__nearest_point(point)
 
         return nearest
@@ -243,12 +328,12 @@ class ValueIteration():
         Returns
         -------
         tuple
-            New point based on velocity (row, col)
+            New point and velocity (row, col, y_vel, x_vel)
         """
 
         # The acceleration action may fail
         if race and (self.accel_succ_prob < np.random.random()):
-            return pt
+            return pt + vel
 
         # Generate velocity subject to limits
         v_y = vel[0] + accel[0]
@@ -266,11 +351,14 @@ class ValueIteration():
         if v_x > self.velocity_range[1]:
             v_x = self.velocity_range[1]
 
-        # Generate position
-        y = pt[0] + v_y
-        x = pt[1] + v_x
+        # Generate position subject to limits of track
+        y = min(max(pt[0] + v_y, 0), self.track.dims[0])
+        x = min(max(pt[1] + v_x, 0), self.track.dims[1])
 
-        return y, x
+        assert v_y is not None, 'Something weird happened'
+        assert v_x is not None, 'Something weird happened'
+
+        return y, x, v_y, v_x
 
     def __value_iteration(self):
         """Value iteration algorithm
@@ -283,7 +371,7 @@ class ValueIteration():
 
         # Initialize v and pi to zeros
         v = self.__init_states()
-        policy = self.__init_states()
+        policy = self.__init_policy()
 
         # Initialize Q(s, a)
         q_s_a = self.__init_q()
@@ -297,9 +385,9 @@ class ValueIteration():
             v_last = deepcopy(v)
 
             if self.verbose:
-                os.system('clear')
-                print(f'Time = {t}\n')
-                self.track.show()
+                #os.system('clear')
+                print(f'\nEpoch = {t}')
+                # self.track.show()
 
             # For all s in S
             for y_pos in range(v.shape[0]):
@@ -336,7 +424,9 @@ class ValueIteration():
                                 # Generate an action
                                 pos = (y_pos, x_pos)
                                 vel = (y_vel, x_vel)
-                                pos_new = self.__generate_action(pos, vel, accel)
+                                action = self.__generate_action(pos, vel, accel)
+                                pos_new = action[0:2]
+                                vel_new = action[2:4] # TODO this isn't being used in training... should it?
 
                                 # See what this action causes
                                 # Outcome 1: it crashes
@@ -373,12 +463,17 @@ class ValueIteration():
 
                             # Find the best Q
                             pi_loc = np.argmax(q_s_a[loc])
-                            policy[loc] = pi_loc
+                            policy[loc] = self.poss_actions[pi_loc]
                             loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
                             v[loc] = q_s_a[loc_q]
 
             # Check if converged
             max_delta_v = np.max(np.abs(v - v_last))
+            if self.verbose:
+                print(f'Current max_delta_v = {max_delta_v}')
+
+            # TODO save these values for learning curve
+
             if max_delta_v < self.tol:
                 print('Stopped because training converged')
                 converged = True
@@ -389,130 +484,89 @@ class ValueIteration():
 
         return policy
 
-    def train(self,
-              track,
-              gamma,
-              bad_crash=False,
-              velocity_range=(-5, 5),
-              accel_succ_prob=0.8,
-              accel=[-1, 0, 1],
-              crash_cost=5,
-              track_cost=1,
-              fin_cost=0,
-              max_iter=5,
-              tol=0.001,
-              vis=True):
+    def train(self):
         """Develops a policy with the Value Iteration algorithm
 
-        Parameters
-        ----------
-        track : Track
-            Track to train on
-
-        gamma : float
-            Discount rate
-
-        bad_crash : bool, optional
-            Whether to return to starting line when a crash
-            occurs, by default False
-
-        velocity_range : tuple, optional
-            Limits for velocity, by default (-5, 5)
-
-        accel_succ_prob : float, optional
-            Probability that an acceleration will succeed, by default 0.8
-
-        accel : list
-            Acceptable acceleration options
-
-        crash_cost : int
-            Cost for crashing; default 5
-
-        track_cost : int
-            Cost for moving; default 1
-
-        fin_cost : int
-            Cost for crossing finish line; default 0
-
-        max_iter : int
-            Maximum number of iterations
-
-        tol : float
-            Tolerance for stopping
-
-        vis : bool
-            Whether to visualize the track in the console
+        
         """
-
-        self.track = track
-        self.bad_crash = bad_crash
-        self.velocity_range = range(velocity_range[0], velocity_range[1]+1)
-        self.accel_succ_prob = accel_succ_prob
-        self.accel = accel
-        self.vis = vis
-        self.crash_cost = crash_cost
-        self.track_cost = track_cost
-        self.max_iter = max_iter
-        self.tol = tol
-        self.fin_cost = fin_cost
-
-        assert gamma >= 0 and gamma < 1, 'Discount rate must be between 0 and 1'
-        self.gamma = gamma
 
         # Generate the set of possible acceleration actions in all directions
         self.poss_actions = list(product(self.accel, repeat=2))
 
-        self.__value_iteration()
+        self.policy = self.__value_iteration()
+
+        return self.policy
 
 
 
-    def race(self, track, policy):
-        """Predicts using a given policy.
+    def race(self, policy=None):
+        """Runs a time trial with the trained policy
 
         Parameters
         ----------
-        track : Track
-            Track on which to race
-
         policy : np.array
-            Policy to use to race
-
-        """
-
-        pass
-
-    def evaluate(self, df, response_col='class'):
-        """Evaluates performance on a given dataset.
-
-        Parameters
-        ----------
-        df : DataFrame
-            DataFrame against which to run evaluation
-
-        response_col : string
-            Name of the response column in the DataFrame;
-            default `class`
+            Policy to use to race; used to speed up experimentation
 
         Returns
         -------
-        err : int
-            Error for the dataset
+        int
+            Number of moves that the time trial was completed in
 
         """
+        if policy is not None:
+            self.policy = policy
 
-        # Get the classes
-        responses = df[response_col].to_numpy()
+        finished = False
+        steps = 0
+        pos = self.track.start
+        vel = (0, 0)
 
-        # Predict on the specified dataset
-        pred_df = self.predict(df, response_col)
-        preds = pred_df['Predicted']
+        if self.vis:
+            self.track.show(pos)
 
-        if self.kind == 'classify':
-            # 0-1 loss for classification
-            err_array = np.not_equal(preds, responses)
-            err = np.sum(err_array)
-        else:
-            # Mean squared error for regression
-            err = (1/len(responses))*np.sum((preds - responses)**2)
+        while not finished:
+            steps += 1
 
-        return err
+            if self.vis:
+                os.system('clear')
+                print(f'Step: {steps}')
+                self.track.show(pos)
+                time.sleep(0.2)
+
+            # Get the acceleration
+            acc = self.policy[pos + vel]
+
+            # Get the action that the policy dictates
+            new_pos = self.__generate_action(pos, vel, acc, race=True)
+
+            # Check if we've crossed the finish line or crashed
+            finished = self.__check_trajectory(pos, new_pos[0:2], 'F')
+            crashed = self.__check_trajectory(pos, new_pos[0:2], '#')
+
+            # Reset, if crashed
+            if crashed:
+                if self.bad_crash:
+                    pos = self.track.start
+                else:
+                    traj = self.__get_trajectory(pos, new_pos[0:2])
+                    pos = self.__nearest_point_along_traj(pos, traj)
+
+                vel = (0, 0)
+
+            else:
+                # Unpack the tuple for next iter
+                pos = new_pos[0:2]
+                vel = new_pos[2:4]
+                assert pos[0] >= 0, 'Row cannot be less than 0'
+                assert pos[1] >= 0, 'Column cannot be less than 0'
+
+
+
+            # TODO: did I miss storing the velocity during training?
+
+        if self.verbose:
+            print(f'\nTime trial completed in {steps} steps')
+
+        return steps
+
+    
