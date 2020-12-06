@@ -31,8 +31,8 @@ class ValueIteration():
                  velocity_range=(-5, 5),
                  accel_succ_prob=0.8,
                  accel=[-1, 0, 1],
-                 crash_cost=-10,
-                 track_cost=-1,
+                 crash_cost=10,
+                 track_cost=1,
                  fin_cost=0,
                  max_iter=50,
                  tol=0.001,
@@ -115,6 +115,11 @@ class ValueIteration():
                            self.track.dims[1],
                            len(self.velocity_range),
                            len(self.velocity_range)))
+        #states = np.random.random((self.track.dims[0],
+        #                   self.track.dims[1],
+        #                   len(self.velocity_range),
+        #                   len(self.velocity_range)))
+
 
         return states
 
@@ -391,6 +396,12 @@ class ValueIteration():
                 print(f'\nEpoch = {t}')
                 # self.track.show()
 
+            # TODO testing, maybe remove
+            v[self.track.finish[0], self.track.finish[1], :, :] = self.fin_cost
+
+            # TODO try with q_s_a, too
+            q_s_a[self.track.finish[0], self.track.finish[1], :, :, :] = self.fin_cost
+
             # For all s in S
             for y_pos in range(v.shape[0]):
                 for x_pos in range(v.shape[1]):
@@ -415,6 +426,11 @@ class ValueIteration():
                                                        'F'):
                                 v[loc] = self.fin_cost
                             """
+
+                            # Fill wall points with wall cost
+                            if self.track.get_point((y_pos, x_pos)) == '#':
+                                v[loc] = self.crash_cost
+                                continue # TODO refactor this to put in 2nd loop down
 
                             # Get the value of the current location
                             # for usage later
@@ -458,8 +474,7 @@ class ValueIteration():
 
                                 # Get the values associated with the possible
                                 # outcome, if it succeeds
-                                loc_new = (
-                                    pos_new[0], pos_new[1], y_vel, x_vel)
+                                loc_new = (pos_new[0], pos_new[1], y_vel, x_vel)
                                 val_succ = v[loc_new]
 
                                 # Calculate the expected value
@@ -475,6 +490,13 @@ class ValueIteration():
                             policy[loc] = self.poss_actions[pi_loc]
                             loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
                             v[loc] = q_s_a[loc_q]
+
+            # TODO delete this if it's not right
+            # TODO update this for vertical case??
+            # Doesn't seem to have done anything
+            # Reset finish line values
+            v[self.track.finish[0], self.track.finish[1], :, :] = self.fin_cost
+
 
             # Check if converged
             max_delta_v = np.max(np.abs(v - v_last))
