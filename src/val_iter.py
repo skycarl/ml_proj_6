@@ -375,7 +375,7 @@ class ValueIteration():
         assert v_y is not None, 'Something weird happened'
         assert v_x is not None, 'Something weird happened'
 
-        # See if a crashed occurred
+        # See if a crash occurred
         if self.__check_trajectory(pt, new_pt, '#'):
             new_vel = (0, 0)
 
@@ -383,9 +383,9 @@ class ValueIteration():
             if self.bad_crash:
                 new_pt = self.track.start
             else:
-                # traj = self.__get_trajectory(pt, new_pt)
-                new_pt = self.__nearest_point(new_pt)
-                # new_pt = self.__nearest_point_along_traj(new_pt, traj)  # TODO try this
+                traj = self.__get_trajectory(pt, new_pt)
+                # new_pt = self.__nearest_point(new_pt)
+                new_pt = self.__nearest_point_along_traj(new_pt, traj)  # TODO try this
 
         return new_pt + new_vel
 
@@ -452,7 +452,8 @@ class ValueIteration():
                                 vel_new = action[2:4]
 
                                 # TODO should this really be the trajectory instead?
-                                if self.track.get_point(pos) == 'F':
+                                #if self.track.get_point(pos) == 'F':
+                                if self.__check_trajectory(pos, pos_new, 'F'):
                                     rew = self.fin_cost
                                 else:
                                     rew = self.track_cost
