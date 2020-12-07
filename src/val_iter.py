@@ -554,7 +554,7 @@ class ValueIteration():
 
         return self.policy
 
-    def race(self, policy=None):
+    def race(self, policy=None, max_race_steps=300):
         """Runs a time trial with the trained policy
 
         Parameters
@@ -562,12 +562,17 @@ class ValueIteration():
         policy : np.array
             Policy to use to race; used to speed up experimentation
 
+        max_race_steps : int
+            Max number of steps for racing
+
         Returns
         -------
         int
             Number of moves that the time trial was completed in
 
         """
+        self.max_race_steps = max_race_steps
+
         if policy is not None:
             self.policy = policy
 
@@ -586,7 +591,8 @@ class ValueIteration():
                 os.system('clear')
                 print(f'Step: {steps}')
                 self.track.show(pos)
-                time.sleep(0.1)
+                print(f'Velocity = {vel}')
+                time.sleep(0.3)
 
             # Get the acceleration
             acc = self.policy[pos + vel]
@@ -605,6 +611,10 @@ class ValueIteration():
             assert pos[1] >= 0, 'Column cannot be less than 0'
 
             # TODO: did I miss storing the velocity during training?
+
+            if steps > max_race_steps:
+                finished = True
+                print(f'Failed to find finish in less than {self.max_race_steps} steps')
 
         if self.vis:
             os.system('clear')
