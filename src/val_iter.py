@@ -368,8 +368,8 @@ class ValueIteration():
             v_x = self.velocity_range[-1]
 
         # Generate position subject to limits of track
-        y = min(max(pt[0] + v_y, 0), self.track.dims[0])
-        x = min(max(pt[1] + v_x, 0), self.track.dims[1])
+        y = min(max(pt[0] + v_y, 0), self.track.dims[0]-1)
+        x = min(max(pt[1] + v_x, 0), self.track.dims[1]-1)
 
         new_pt = (y, x)
         new_vel = (v_y, v_x)
@@ -378,7 +378,8 @@ class ValueIteration():
         assert v_x is not None, 'Something weird happened'
 
         # See if a crash occurred
-        if self.__check_trajectory(pt, new_pt, '#'):
+        #if self.__check_trajectory(pt, new_pt, '#'):
+        if self.track.get_point(new_pt) == '#':
             new_vel = (0, 0)
 
             # Crash behavior depends on parameter
@@ -386,8 +387,8 @@ class ValueIteration():
                 new_pt = self.track.start
             else:
                 traj = self.__get_trajectory(pt, new_pt)
-                # new_pt = self.__nearest_point(new_pt)
-                new_pt = self.__nearest_point_along_traj(new_pt, traj)  # TODO try this
+                new_pt = self.__nearest_point(new_pt)
+                # new_pt = self.__nearest_point_along_traj(new_pt, traj)  # TODO try this
 
         return new_pt + new_vel
 
@@ -462,8 +463,8 @@ class ValueIteration():
                                 vel_new = action[2:4]
 
                                 # TODO should this really be the trajectory instead?
-                                #if self.track.get_point(pos) == 'F':
-                                if self.__check_trajectory(pos, pos_new, 'F'):
+                                if self.track.get_point(pos) == 'F':
+                                #if self.__check_trajectory(pos, pos_new, 'F'):
                                     rew = self.fin_cost
                                 else:
                                     rew = self.track_cost
@@ -601,7 +602,9 @@ class ValueIteration():
             new_pos = self.__generate_action(pos, vel, acc, race=True)
 
             # Check if we've crossed the finish line or crashed
-            finished = self.__check_trajectory(pos, new_pos[0:2], 'F')
+            #finished = self.__check_trajectory(pos, new_pos[0:2], 'F')
+            if self.track.get_point(new_pos[0:2]) == 'F':
+                finished = True
             #crashed = self.__check_trajectory(pos, new_pos[0:2], '#')
 
             # Unpack the tuple for next iter
