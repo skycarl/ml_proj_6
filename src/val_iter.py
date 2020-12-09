@@ -368,8 +368,8 @@ class ValueIteration():
             v_x = self.velocity_range[-1]
 
         # Generate position subject to limits of track
-        y = min(max(pt[0] + v_y, 0), self.track.dims[0])
-        x = min(max(pt[1] + v_x, 0), self.track.dims[1])
+        y = min(max(pt[0] + v_y, 0), self.track.dims[0]-1)
+        x = min(max(pt[1] + v_x, 0), self.track.dims[1]-1)
 
         new_pt = (y, x)
         new_vel = (v_y, v_x)
