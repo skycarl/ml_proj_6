@@ -111,10 +111,18 @@ class ValueIteration():
             Shape is (rows, cols, velocity_range, velocity_range)
         """
 
+        """
         states = np.zeros((self.track.dims[0],
                            self.track.dims[1],
                            len(self.velocity_range),
                            len(self.velocity_range)))
+        """
+        
+        states = np.random.random((self.track.dims[0],
+                           self.track.dims[1],
+                           len(self.velocity_range),
+                           len(self.velocity_range)))
+
 
         return states
 
@@ -144,13 +152,19 @@ class ValueIteration():
             Empty Q(s, a) array; shape is (rows, cols, velocity_range,
             velocity_range, possible acceleration options)
         """
-
+        """
         q_s_a = np.empty((self.track.dims[0],
                           self.track.dims[1],
                           len(self.velocity_range),
                           len(self.velocity_range),
                           len(self.poss_actions)))
-
+        """
+        q_s_a = np.random.random((self.track.dims[0],
+                          self.track.dims[1],
+                          len(self.velocity_range),
+                          len(self.velocity_range),
+                          len(self.poss_actions)))
+        
         return q_s_a
 
     def __get_trajectory(self, point1, point2):
@@ -238,9 +252,11 @@ class ValueIteration():
         while not found:
             rad += 1
 
-            # Generate possibilities
+            # Generate possibilities in random order to reduce the chances
+            # of getting stuck
             poss = (-rad, rad)
             circle = list(product(poss, repeat=2))
+            np.random.shuffle(circle)
 
             # Search the possibilities
             for pt in circle:
@@ -250,7 +266,7 @@ class ValueIteration():
                 if cand_pt[0] < 0 or cand_pt[1] < 0:
                     continue
 
-                if cand_pt[0] >= self.track.dims[0] or cand_pt[1] > self.track.dims[1]:
+                if cand_pt[0] >= self.track.dims[0] or cand_pt[1] >= self.track.dims[1]:
                     continue
 
                 pt_tup = (cand_pt[0], cand_pt[1])
@@ -342,23 +358,38 @@ class ValueIteration():
         if v_y < self.velocity_range[0]:
             v_y = self.velocity_range[0]
 
-        if v_y > self.velocity_range[1]:
-            v_y = self.velocity_range[1]
+        if v_y > self.velocity_range[-1]:
+            v_y = self.velocity_range[-1]
 
         if v_x < self.velocity_range[0]:
             v_x = self.velocity_range[0]
 
-        if v_x > self.velocity_range[1]:
-            v_x = self.velocity_range[1]
+        if v_x > self.velocity_range[-1]:
+            v_x = self.velocity_range[-1]
 
         # Generate position subject to limits of track
         y = min(max(pt[0] + v_y, 0), self.track.dims[0])
         x = min(max(pt[1] + v_x, 0), self.track.dims[1])
 
+        new_pt = (y, x)
+        new_vel = (v_y, v_x)
+
         assert v_y is not None, 'Something weird happened'
         assert v_x is not None, 'Something weird happened'
 
-        return y, x, v_y, v_x
+        # See if a crash occurred
+        if self.__check_trajectory(pt, new_pt, '#'):
+            new_vel = (0, 0)
+
+            # Crash behavior depends on parameter
+            if self.bad_crash:
+                new_pt = self.track.start
+            else:
+                traj = self.__get_trajectory(pt, new_pt)
+                # new_pt = self.__nearest_point(new_pt)
+                new_pt = self.__nearest_point_along_traj(new_pt, traj)  # TODO try this
+
+        return new_pt + new_vel
 
     def __value_iteration(self):
         """Value iteration algorithm
@@ -385,49 +416,61 @@ class ValueIteration():
             v_last = deepcopy(v)
 
             if self.verbose:
-                #os.system('clear')
+                # os.system('clear')
                 print(f'\nEpoch = {t}')
                 # self.track.show()
+
+            # TODO testing, maybe remove
+            v[self.track.finish[0], self.track.finish[1], :, :] = self.fin_cost
+
+            # TODO trying with q_s_a, too
+            q_s_a[self.track.finish[0], self.track.finish[1], :, :, :] = self.fin_cost
 
             # For all s in S
             for y_pos in range(v.shape[0]):
                 for x_pos in range(v.shape[1]):
+
+                    # Fill wall points with crash cost
+                    if self.track.get_point((y_pos, x_pos)) == '#':
+                        v[y_pos, x_pos, :, :] = self.crash_cost
+                        continue
+
                     for y_vel in self.velocity_range:
                         for x_vel in self.velocity_range:
                             loc = (y_pos, x_pos, y_vel, x_vel)
 
                             """
-                            # Is this right?
-                            curr_point = (y_pos, x_pos)
-
-                            # Check if we've crashed
-                            # TODO Is this the right spot for this?
-                            if self.__check_trajectory(last_point,
-                                                       curr_point,
-                                                       '#'):
+                            # Fill wall points with crash cost
+                            if self.track.get_point((y_pos, x_pos)) == '#':
                                 v[loc] = self.crash_cost
-
-                            # Check if we've crossed the finish line
-                            if self.__check_trajectory(last_point,
-                                                       curr_point,
-                                                       'F'):
-                                v[loc] = self.fin_cost
+                                continue  # TODO refactor this to put in 2nd loop down
                             """
 
                             # Get the value of the current location
                             # for usage later
-                            val_fail = v[loc]
+                            #fail_val = v[loc]
 
                             # For all a in A:
-                            for idx_act, accel in enumerate(self.poss_actions):                                
+                            for idx_act, accel in enumerate(self.poss_actions):
 
                                 # Generate an action
                                 pos = (y_pos, x_pos)
                                 vel = (y_vel, x_vel)
                                 action = self.__generate_action(pos, vel, accel)
                                 pos_new = action[0:2]
-                                vel_new = action[2:4] # TODO this isn't being used in training... should it?
+                                # TODO this isn't being used in training... should it?
+                                vel_new = action[2:4]
 
+                                # TODO should this really be the trajectory instead?
+                                #if self.track.get_point(pos) == 'F':
+                                if self.__check_trajectory(pos, pos_new, 'F'):
+                                    rew = self.fin_cost
+                                else:
+                                    rew = self.track_cost
+
+                                
+
+                                """
                                 # See what this action causes
                                 # Outcome 1: it crashes
                                 if self.__check_trajectory(pos, pos_new, '#'):
@@ -439,7 +482,7 @@ class ValueIteration():
                                         pos_new = self.track.start
                                     else:
                                         traj = self.__get_trajectory(pos, pos_new)
-                                        pos_new = self.__nearest_point_along_traj(pos_new, traj)
+                                        pos_new = self.__nearest_point(pos_new)
 
                                 # Outcome 2: it crosses the finish line
                                 elif self.__check_trajectory(pos, pos_new, 'F'):
@@ -448,14 +491,23 @@ class ValueIteration():
                                 # Outcome 3: it lands on the track
                                 else:
                                     rew = self.track_cost
+                                """
+                                
 
                                 # Get the values associated with the possible
                                 # outcome, if it succeeds
                                 loc_new = (pos_new[0], pos_new[1], y_vel, x_vel)
                                 val_succ = v[loc_new]
 
+                                # Find value if the action fails
+                                fail_action = self.__generate_action(pos, vel, (0, 0))
+                                fail_pos = fail_action[0:2]
+                                fail_loc = (fail_pos[0], fail_pos[1], y_vel, x_vel)
+                                fail_val = v[fail_loc]
+
                                 # Calculate the expected value
-                                exp_val = (self.accel_succ_prob * val_succ) + (((1-self.accel_succ_prob)) * (val_fail))
+                                exp_val = (self.accel_succ_prob * val_succ) + \
+                                    (((1-self.accel_succ_prob)) * (fail_val))
 
                                 # Get Q(s, a)
                                 loc_act = (y_pos, x_pos, y_vel, x_vel, idx_act)
@@ -466,6 +518,13 @@ class ValueIteration():
                             policy[loc] = self.poss_actions[pi_loc]
                             loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
                             v[loc] = q_s_a[loc_q]
+
+            # TODO delete this if it's not right
+            # TODO update this for vertical case??
+            # Doesn't seem to have done anything
+            # Reset finish line values
+            v[self.track.finish[0], self.track.finish[1], :, :] = self.fin_cost
+
 
             # Check if converged
             max_delta_v = np.max(np.abs(v - v_last))
@@ -486,8 +545,6 @@ class ValueIteration():
 
     def train(self):
         """Develops a policy with the Value Iteration algorithm
-
-        
         """
 
         # Generate the set of possible acceleration actions in all directions
@@ -497,9 +554,7 @@ class ValueIteration():
 
         return self.policy
 
-
-
-    def race(self, policy=None):
+    def race(self, policy=None, max_race_steps=300):
         """Runs a time trial with the trained policy
 
         Parameters
@@ -507,12 +562,17 @@ class ValueIteration():
         policy : np.array
             Policy to use to race; used to speed up experimentation
 
+        max_race_steps : int
+            Max number of steps for racing
+
         Returns
         -------
         int
             Number of moves that the time trial was completed in
 
         """
+        self.max_race_steps = max_race_steps
+
         if policy is not None:
             self.policy = policy
 
@@ -531,7 +591,8 @@ class ValueIteration():
                 os.system('clear')
                 print(f'Step: {steps}')
                 self.track.show(pos)
-                time.sleep(0.2)
+                print(f'Velocity = {vel}')
+                time.sleep(0.3)
 
             # Get the acceleration
             acc = self.policy[pos + vel]
@@ -541,32 +602,25 @@ class ValueIteration():
 
             # Check if we've crossed the finish line or crashed
             finished = self.__check_trajectory(pos, new_pos[0:2], 'F')
-            crashed = self.__check_trajectory(pos, new_pos[0:2], '#')
+            #crashed = self.__check_trajectory(pos, new_pos[0:2], '#')
 
-            # Reset, if crashed
-            if crashed:
-                if self.bad_crash:
-                    pos = self.track.start
-                else:
-                    traj = self.__get_trajectory(pos, new_pos[0:2])
-                    pos = self.__nearest_point_along_traj(pos, traj)
-
-                vel = (0, 0)
-
-            else:
-                # Unpack the tuple for next iter
-                pos = new_pos[0:2]
-                vel = new_pos[2:4]
-                assert pos[0] >= 0, 'Row cannot be less than 0'
-                assert pos[1] >= 0, 'Column cannot be less than 0'
-
-
+            # Unpack the tuple for next iter
+            pos = new_pos[0:2]
+            vel = new_pos[2:4]
+            assert pos[0] >= 0, 'Row cannot be less than 0'
+            assert pos[1] >= 0, 'Column cannot be less than 0'
 
             # TODO: did I miss storing the velocity during training?
+
+            if steps > max_race_steps:
+                finished = True
+                print(f'Failed to find finish in less than {self.max_race_steps} steps')
+
+        if self.vis:
+            os.system('clear')
+            self.track.show(pos)
 
         if self.verbose:
             print(f'\nTime trial completed in {steps} steps')
 
         return steps
-
-    
