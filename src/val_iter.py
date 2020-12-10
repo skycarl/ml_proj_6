@@ -503,21 +503,22 @@ class ValueIteration():
                                 fail_action = self.__generate_action(pos, vel, (0, 0))
                                 fail_pos = fail_action[0:2]
                                 fail_loc = (fail_pos[0], fail_pos[1], y_vel, x_vel)
-                                fail_val = v[fail_loc]
+                                fail_val = v_last[fail_loc]
 
-                                # Calculate the expected value
-                                exp_val = (self.accel_succ_prob * val_succ) + \
+                                # Calculate the expected value of the possible outcomes
+                                sum_poss = (self.accel_succ_prob * val_succ) + \
                                     (((1-self.accel_succ_prob)) * (fail_val))
 
                                 # Get Q(s, a)
                                 loc_act = (y_pos, x_pos, y_vel, x_vel, idx_act)
-                                q_s_a[loc_act] = rew + (self.gamma * exp_val)
+                                q_s_a[loc_act] = rew + (self.gamma * sum_poss)
 
                             # Find the best Q
                             pi_loc = np.argmax(q_s_a[loc])
                             policy[loc] = self.poss_actions[pi_loc]
                             loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
                             v[loc] = q_s_a[loc_q]
+                            # TODO why are the values not changing as we get closer to the finish line, like the example is?
 
             # TODO delete this if it's not right
             # TODO update this for vertical case??
@@ -592,7 +593,7 @@ class ValueIteration():
                 print(f'Step: {steps}')
                 self.track.show(pos)
                 print(f'Velocity = {vel}')
-                time.sleep(0.3)
+                time.sleep(0.1)
 
             # Get the acceleration
             acc = self.policy[pos + vel]
