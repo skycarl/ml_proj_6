@@ -286,15 +286,6 @@ class ValueIteration():
         nearest = None
 
         for pt in reversed(trajec):
-            # If an invalid point is provided (i.e. off the track),
-            # return the original point
-            if pt[0] < 0 or pt[1] < 0:
-                nearest = trajec[0]
-                break
-
-            if pt[0] >= self.track.dims[0] or pt[1] >= self.track.dims[1]:
-                nearest = trajec[0]
-                break
 
             # Otherwise, find the nearest track point
             if self.track.get_point(pt) == '.':
