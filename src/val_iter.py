@@ -460,7 +460,7 @@ class ValueIteration():
 
             # Collect current performance for learning curve
             if gen_learn_curve:
-                self.learn_curve.append(self.race(policy=policy, vis=False, verbose=False))
+                self.learn_curve.append(self.race(policy=policy, vis=False))
             
             # Check if converged
             max_delta_v = np.max(np.abs(v - v_last))
