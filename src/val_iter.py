@@ -292,7 +292,7 @@ class ValueIteration():
                 nearest = trajec[0]
                 break
 
-            if point[0] >= self.track.dims[0] or point[1] >= self.track.dims[1]:
+            if pt[0] >= self.track.dims[0] or pt[1] >= self.track.dims[1]:
                 nearest = trajec[0]
                 break
 
