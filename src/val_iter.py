@@ -22,6 +22,8 @@ class ValueIteration():
     train()
 
     race()
+
+    evaluate()
     """
 
     def __init__(self,
@@ -111,20 +113,14 @@ class ValueIteration():
             Shape is (rows, cols, velocity_range, velocity_range)
         """
 
-        """
-        states = np.zeros((self.track.dims[0],
-                           self.track.dims[1],
-                           len(self.velocity_range),
-                           len(self.velocity_range)))
-        """
         
-        states = np.random.random((self.track.dims[0],
+        states = np.zeros((self.track.dims[0],
                            self.track.dims[1],
                            len(self.velocity_range),
                            len(self.velocity_range)))
 
         states[self.track.finish[0], self.track.finish[1], :, :] = -self.fin_cost
-
+        
         return states
 
     def __init_policy(self):
@@ -153,14 +149,8 @@ class ValueIteration():
             Empty Q(s, a) array; shape is (rows, cols, velocity_range,
             velocity_range, possible acceleration options)
         """
-        """
+        
         q_s_a = np.empty((self.track.dims[0],
-                          self.track.dims[1],
-                          len(self.velocity_range),
-                          len(self.velocity_range),
-                          len(self.poss_actions)))
-        """
-        q_s_a = np.random.random((self.track.dims[0],
                           self.track.dims[1],
                           len(self.velocity_range),
                           len(self.velocity_range),
@@ -389,8 +379,7 @@ class ValueIteration():
                 new_pt = self.track.start
             else:
                 traj = self.__get_trajectory(pt, new_pt)
-                # new_pt = self.__nearest_point(new_pt)
-                new_pt = self.__nearest_point_along_traj(new_pt, traj)  # TODO try this
+                new_pt = self.__nearest_point_along_traj(new_pt, traj)
 
         return new_pt + new_vel
 
@@ -441,11 +430,8 @@ class ValueIteration():
                                 vel = (y_vel, x_vel)
                                 action = self.__generate_action(pos, vel, accel)
                                 pos_new = action[0:2]
-                                # TODO this isn't being used in training... should it?
                                 vel_new = action[2:4]
 
-                                # TODO should this really be the trajectory instead?
-                                #if self.track.get_point(pos) == 'F':
                                 if self.__check_trajectory(pos, pos_new, 'F'):
                                     rew = self.fin_cost
                                 else:
@@ -482,7 +468,6 @@ class ValueIteration():
             # Doesn't seem to have done anything
             # Reset finish line values
             v[self.track.finish[0], self.track.finish[1], :, :] = self.fin_cost
-
 
             # Check if converged
             max_delta_v = np.max(np.abs(v - v_last))
@@ -550,7 +535,7 @@ class ValueIteration():
                 print(f'Step: {steps}')
                 self.track.show(pos)
                 print(f'Velocity = {vel}')
-                time.sleep(0.1)
+                time.sleep(0.2)
 
             # Get the acceleration
             acc = self.policy[pos + vel]
@@ -560,15 +545,12 @@ class ValueIteration():
 
             # Check if we've crossed the finish line or crashed
             finished = self.__check_trajectory(pos, new_pos[0:2], 'F')
-            #crashed = self.__check_trajectory(pos, new_pos[0:2], '#')
 
             # Unpack the tuple for next iter
             pos = new_pos[0:2]
             vel = new_pos[2:4]
             assert pos[0] >= 0, 'Row cannot be less than 0'
             assert pos[1] >= 0, 'Column cannot be less than 0'
-
-            # TODO: did I miss storing the velocity during training?
 
             if steps > max_race_steps:
                 finished = True
@@ -582,3 +564,15 @@ class ValueIteration():
             print(f'\nTime trial completed in {steps} steps')
 
         return steps
+
+    def evaluate(self, n_races):
+        """Evaluates a policy by running n races.
+
+        Parameters
+        ----------
+        n_races : int
+            Number of races to run with the policy
+        """        
+
+        #for
+        pass 
