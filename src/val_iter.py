@@ -90,8 +90,8 @@ class ValueIteration():
         self.accel_succ_prob = accel_succ_prob
         self.accel = accel
         self.vis = vis
-        self.crash_cost = crash_cost
-        self.track_cost = track_cost
+        self.crash_cost = -crash_cost
+        self.track_cost = -track_cost
         self.max_iter = max_iter
         self.tol = tol
         self.fin_cost = fin_cost
