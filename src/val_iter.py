@@ -82,18 +82,18 @@ class ValueIteration(Race):
             Verbosity switch
 
         """
-        super().__init__(track,
-                         gamma,
-                         bad_crash,
-                         velocity_range,
-                         accel_succ_prob,
-                         accel,
-                         crash_cost,
-                         track_cost,
-                         fin_cost,
-                         max_iter,
-                         tol,
-                         verbose)
+        super().__init__(track=track,
+                         gamma=gamma,
+                         bad_crash=bad_crash,
+                         velocity_range=velocity_range,
+                         accel_succ_prob=accel_succ_prob,
+                         accel=accel,
+                         crash_cost=crash_cost,
+                         track_cost=track_cost,
+                         fin_cost=fin_cost,
+                         max_iter=max_iter,
+                         tol=tol,
+                         verbose=verbose)
 
     def find_policy(self, gen_learn_curve):
         """Finds a policy using the value iteration algorithm

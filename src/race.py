@@ -33,6 +33,8 @@ class Race(ABC):
     def __init__(self,
                  track,
                  gamma,
+                 learning_rate=None,
+                 episode_steps=None,
                  bad_crash=False,
                  velocity_range=(-5, 5),
                  accel_succ_prob=0.8,
@@ -87,6 +89,8 @@ class Race(ABC):
         """
 
         self.track = track
+        self.learning_rate = learning_rate
+        self.episode_steps = episode_steps
         self.bad_crash = bad_crash
         self.velocity_range = range(velocity_range[0], velocity_range[1]+1)
         self.accel_succ_prob = accel_succ_prob
