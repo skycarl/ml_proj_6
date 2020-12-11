@@ -140,23 +140,10 @@ class Race(ABC):
 
         return pol
 
+    @abstractmethod
     def init_q(self):
-        """Initializes Q(s, a) of empty values
-
-        Returns
-        -------
-        np.array
-            Empty Q(s, a) array; shape is (rows, cols, velocity_range,
-            velocity_range, possible acceleration options)
-        """
-
-        q_s_a = np.empty((self.track.dims[0],
-                          self.track.dims[1],
-                          len(self.velocity_range),
-                          len(self.velocity_range),
-                          len(self.poss_actions)))
-
-        return q_s_a
+        """Abstract method for initializing Q(s, a)"""
+        raise NotImplementedError('There must be a init_q method in the child class')
 
     def __get_trajectory(self, point1, point2):
         """Gets a trajectory for a given point ('#' for a crash or 'F' for

@@ -95,6 +95,24 @@ class ValueIteration(Race):
                          tol=tol,
                          verbose=verbose)
 
+    def init_q(self):
+        """Initializes Q(s, a) of empty values
+
+        Returns
+        -------
+        np.array
+            Empty Q(s, a) array; shape is (rows, cols, velocity_range,
+            velocity_range, possible acceleration options)
+        """
+
+        q_s_a = np.empty((self.track.dims[0],
+                          self.track.dims[1],
+                          len(self.velocity_range),
+                          len(self.velocity_range),
+                          len(self.poss_actions)))
+
+        return q_s_a
+
     def find_policy(self, gen_learn_curve):
         """Finds a policy using the value iteration algorithm
 
