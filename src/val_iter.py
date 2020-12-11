@@ -460,8 +460,9 @@ class ValueIteration():
 
             # Collect current performance for learning curve
             if gen_learn_curve:
-                self.learn_curve.append(self.race(policy=policy, vis=False))
-            
+                races = self.evaluate(policy=policy)
+                self.learn_curve.append(np.mean(races))
+
             # Check if converged
             max_delta_v = np.max(np.abs(v - v_last))
             if self.verbose:
@@ -509,7 +510,7 @@ class ValueIteration():
         Parameters
         ----------
         policy : np.array
-            Policy to use to race; used to speed up experimentation
+            Policy to use to race
 
         max_race_steps : int
             Max number of steps for racing
@@ -573,7 +574,7 @@ class ValueIteration():
 
         return steps
 
-    def evaluate(self, n_races=20):
+    def evaluate(self, n_races=20, policy=None):
         """Evaluates a policy by running n races.
 
         Parameters
@@ -581,16 +582,22 @@ class ValueIteration():
         n_races : int
             Number of races to run with the policy; default 20
 
+        policy : np.array
+            Policy to use to race; used to speed up experimentation
+
         Returns
         -------
         results : list
             List of performance results
         """
 
+        if policy is None:
+            policy = self.policy
+
         results = [None]*n_races
 
-        for _ in n_races:
-            results.append(self.race(vis=False))
+        for race in range(n_races):
+            results[race] = self.race(vis=False, policy=policy)
 
         return results
          
