@@ -265,15 +265,12 @@ class ValueIteration():
         assert nearest is not None, 'Could not find track point'
         return nearest
 
-    def __nearest_point_along_traj(self, point, trajec):
-        """Finds the nearest track point to the passed point, along the
-        specified trajectory; this is to prevent "cheating"
+    def __furthest_point_along_traj(self, trajec):
+        """Finds the track point furthest along the trajectory;
+        this is to prevent "cheating"
 
         Parameters
         ----------
-        point : tuple
-            Point to find nearest open point against
-
         trajec : list
             Trajectory along which to find the open point
 
@@ -284,20 +281,22 @@ class ValueIteration():
         """
 
         nearest = None
+        traj_pts = [self.track.get_point(pt) for pt in trajec]
 
-        for pt in reversed(trajec):
+        # Step through the trajectory points from initial to new point
+        for idx, pt in enumerate(traj_pts):
 
-            # Otherwise, find the nearest track point
-            if self.track.get_point(pt) == '.':
-                nearest = pt
+            # When we get to a wall, use the last point
+            if pt == '#':
+                nearest = trajec[idx-1]
                 break
 
         # Fall back to a circular search (i.e. not along the trajectory) if
         # no track point is found (for the case where the trajectory is
         # completely inside of the wall points while training) or if the
         # discovered point is the original point itself
-        if nearest is None or nearest == point:
-            nearest = self.__nearest_point(point)
+        if nearest is None or nearest == trajec[0]:
+            nearest = self.__nearest_point(trajec[0])
 
         return nearest
 
@@ -363,7 +362,7 @@ class ValueIteration():
                 new_pt = self.track.start
             else:
                 traj = self.__get_trajectory(pt, new_pt)
-                new_pt = self.__nearest_point_along_traj(new_pt, traj)
+                new_pt = self.__furthest_point_along_traj(traj)
 
         return new_pt + new_vel
 
