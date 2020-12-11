@@ -22,6 +22,9 @@ class Track():
     finish : tuple
         Tuple containing finish line
 
+    name : string
+        Name of the track
+
     Methods
     -------
     get_start_line()
@@ -49,6 +52,7 @@ class Track():
         """
 
         self.filename = filename
+        self.name = self.filename.replace('.txt', '')
 
         # Read the file
         filename = 'data/' + filename

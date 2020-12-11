@@ -17,6 +17,9 @@ class ValueIteration():
     verbose : bool
         Verbosity switch
 
+    learn_curve : list
+        Learning curve for training session
+
     Methods
     -------
     train()
@@ -38,7 +41,6 @@ class ValueIteration():
                  fin_cost=0,
                  max_iter=50,
                  tol=0.001,
-                 vis=True,
                  verbose=True):
         """Initializes an object.
 
@@ -78,9 +80,6 @@ class ValueIteration():
         tol : float
             Tolerance for stopping
 
-        vis : bool
-            Whether to visualize the track in the console
-
         verbose: bool
             Verbosity switch
 
@@ -91,7 +90,6 @@ class ValueIteration():
         self.velocity_range = range(velocity_range[0], velocity_range[1]+1)
         self.accel_succ_prob = accel_succ_prob
         self.accel = accel
-        self.vis = vis
         self.crash_cost = -crash_cost
         self.track_cost = -track_cost
         self.max_iter = max_iter
@@ -113,7 +111,6 @@ class ValueIteration():
             Shape is (rows, cols, velocity_range, velocity_range)
         """
 
-        
         states = np.zeros((self.track.dims[0],
                            self.track.dims[1],
                            len(self.velocity_range),
@@ -379,24 +376,26 @@ class ValueIteration():
 
         return new_pt + new_vel
 
-    def __value_iteration(self):
+    def __value_iteration(self, gen_learn_curve):
         """Value iteration algorithm
 
         Returns
         -------
         policy : np.array
             Policy found by Value Iteration
+
+        gen_learn_curve : bool
+            Whether to generate learning curve data
         """
 
-        # Initialize v and pi to zeros
+        # Initialize v, pi, and Q(s, a)
         v = self.__init_states()
         policy = self.__init_policy()
-
-        # Initialize Q(s, a)
         q_s_a = self.__init_q()
 
         converged = False
         t = 0
+        self.learn_curve = []
 
         while not converged:
             t += 1
@@ -459,12 +458,14 @@ class ValueIteration():
                             loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
                             v[loc] = q_s_a[loc_q]
 
+            # Collect current performance for learning curve
+            if gen_learn_curve:
+                self.learn_curve.append(self.race(policy=policy, vis=False, verbose=False))
+            
             # Check if converged
             max_delta_v = np.max(np.abs(v - v_last))
             if self.verbose:
                 print(f'Current max_delta_v = {max_delta_v}')
-
-            # TODO save these values for learning curve
 
             if max_delta_v < self.tol:
                 print('Stopped because training converged')
@@ -476,18 +477,33 @@ class ValueIteration():
 
         return policy
 
-    def train(self):
+    def train(self, gen_learn_curve=False):
         """Develops a policy with the Value Iteration algorithm
+
+        Parameters
+        ----------
+        gen_learn_curve : bool
+            Whether to generate learning curve data
+
+        Returns
+        -------
+        np.array
+            Learned policy
         """
+
+        assert type(gen_learn_curve) is bool, 'Must be boolean '
 
         # Generate the set of possible acceleration actions in all directions
         self.poss_actions = list(product(self.accel, repeat=2))
 
-        self.policy = self.__value_iteration()
+        self.policy = self.__value_iteration(gen_learn_curve)
+
+        if gen_learn_curve:
+            np.save(f'Learn_curve_{self.track.name}_{self.gamma}.npy', self.learn_curve)
 
         return self.policy
 
-    def race(self, policy=None, max_race_steps=300):
+    def race(self, policy=None, max_race_steps=300, vis=True):
         """Runs a time trial with the trained policy
 
         Parameters
@@ -498,6 +514,9 @@ class ValueIteration():
         max_race_steps : int
             Max number of steps for racing
 
+        vis : bool
+            Whether to visualize the track in the console when racing
+
         Returns
         -------
         int
@@ -506,29 +525,28 @@ class ValueIteration():
         """
         self.max_race_steps = max_race_steps
 
-        if policy is not None:
-            self.policy = policy
+        if policy is None:
+            policy = self.policy
 
         finished = False
         steps = 0
         pos = self.track.start
         vel = (0, 0)
 
-        if self.vis:
+        if vis:
             self.track.show(pos)
 
         while not finished:
             steps += 1
 
-            if self.vis:
+            if vis:
                 os.system('clear')
                 print(f'Step: {steps}')
                 self.track.show(pos)
-                print(f'Velocity = {vel}')
                 time.sleep(0.2)
 
             # Get the acceleration
-            acc = self.policy[pos + vel]
+            acc = policy[pos + vel]
 
             # Get the action that the policy dictates
             new_pos = self.__generate_action(pos, vel, acc, race=True)
@@ -544,25 +562,35 @@ class ValueIteration():
 
             if steps > max_race_steps:
                 finished = True
-                print(f'Failed to find finish in less than {self.max_race_steps} steps')
 
-        if self.vis:
+                if vis:
+                    print(f'Failed to find finish in less than {self.max_race_steps} steps')
+
+        if vis:
             os.system('clear')
             self.track.show(pos)
-
-        if self.verbose:
             print(f'\nTime trial completed in {steps} steps')
 
         return steps
 
-    def evaluate(self, n_races):
+    def evaluate(self, n_races=20):
         """Evaluates a policy by running n races.
 
         Parameters
         ----------
         n_races : int
-            Number of races to run with the policy
-        """        
+            Number of races to run with the policy; default 20
 
-        #for
-        pass 
+        Returns
+        -------
+        results : list
+            List of performance results
+        """
+
+        results = [None]*n_races
+
+        for _ in n_races:
+            results.append(self.race(vis=False))
+
+        return results
+         
