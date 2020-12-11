@@ -115,7 +115,7 @@ class ValueIteration():
                            self.track.dims[1],
                            len(self.velocity_range),
                            len(self.velocity_range)))
-        
+
         return states
 
     def __init_policy(self):
@@ -144,13 +144,13 @@ class ValueIteration():
             Empty Q(s, a) array; shape is (rows, cols, velocity_range,
             velocity_range, possible acceleration options)
         """
-        
+
         q_s_a = np.empty((self.track.dims[0],
                           self.track.dims[1],
                           len(self.velocity_range),
                           len(self.velocity_range),
                           len(self.poss_actions)))
-        
+
         return q_s_a
 
     def __get_trajectory(self, point1, point2):
@@ -413,7 +413,8 @@ class ValueIteration():
                                 # Generate an action
                                 pos = (y_pos, x_pos)
                                 vel = (y_vel, x_vel)
-                                action = self.__generate_action(pos, vel, accel)
+                                action = self.__generate_action(
+                                    pos, vel, accel)
                                 pos_new = action[0:2]
                                 vel_new = action[2:4]
 
@@ -424,14 +425,17 @@ class ValueIteration():
 
                                 # Get the values associated with the possible
                                 # outcome, if it succeeds
-                                loc_new = (pos_new[0], pos_new[1], vel_new[0], vel_new[1])
+                                loc_new = (
+                                    pos_new[0], pos_new[1], vel_new[0], vel_new[1])
                                 val_succ = v[loc_new]
 
                                 # Find value if the action fails
-                                fail_action = self.__generate_action(pos, vel, (0, 0))
+                                fail_action = self.__generate_action(
+                                    pos, vel, (0, 0))
                                 fail_pos = fail_action[0:2]
                                 fail_vel = fail_action[2:4]
-                                fail_loc = (fail_pos[0], fail_pos[1], fail_vel[0], fail_vel[1])
+                                fail_loc = (
+                                    fail_pos[0], fail_pos[1], fail_vel[0], fail_vel[1])
                                 fail_val = v_last[fail_loc]
 
                                 # Calculate the expected value of the possible outcomes
@@ -490,7 +494,8 @@ class ValueIteration():
         self.policy = self.__value_iteration(gen_learn_curve)
 
         if gen_learn_curve:
-            np.save(f'Learn_curve_{self.track.name}_{self.gamma}.npy', self.learn_curve)
+            np.save(
+                f'Learn_curve_{self.track.name}_{self.gamma}.npy', self.learn_curve)
 
         return self.policy
 
@@ -555,7 +560,8 @@ class ValueIteration():
                 finished = True
 
                 if vis:
-                    print(f'Failed to find finish in less than {self.max_race_steps} steps')
+                    print(
+                        f'Failed to find finish in less than {self.max_race_steps} steps')
 
         if vis:
             os.system('clear')
@@ -590,4 +596,3 @@ class ValueIteration():
             results[race] = self.race(vis=False, policy=policy)
 
         return results
-         
