@@ -118,8 +118,6 @@ class ValueIteration():
                            self.track.dims[1],
                            len(self.velocity_range),
                            len(self.velocity_range)))
-
-        states[self.track.finish[0], self.track.finish[1], :, :] = -self.fin_cost
         
         return states
 
@@ -155,8 +153,6 @@ class ValueIteration():
                           len(self.velocity_range),
                           len(self.velocity_range),
                           len(self.poss_actions)))
-
-        q_s_a[self.track.finish[0], self.track.finish[1], :, :, :] = -self.fin_cost
         
         return q_s_a
 
@@ -462,12 +458,6 @@ class ValueIteration():
                             policy[loc] = self.poss_actions[pi_loc]
                             loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
                             v[loc] = q_s_a[loc_q]
-
-            # TODO delete this if it's not right
-            # TODO update this for vertical case??
-            # Doesn't seem to have done anything
-            # Reset finish line values
-            v[self.track.finish[0], self.track.finish[1], :, :] = self.fin_cost
 
             # Check if converged
             max_delta_v = np.max(np.abs(v - v_last))
