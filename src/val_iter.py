@@ -453,13 +453,14 @@ class ValueIteration():
 
                                 # Get the values associated with the possible
                                 # outcome, if it succeeds
-                                loc_new = (pos_new[0], pos_new[1], y_vel, x_vel)
+                                loc_new = (pos_new[0], pos_new[1], vel_new[0], vel_new[1])
                                 val_succ = v[loc_new]
 
                                 # Find value if the action fails
                                 fail_action = self.__generate_action(pos, vel, (0, 0))
                                 fail_pos = fail_action[0:2]
-                                fail_loc = (fail_pos[0], fail_pos[1], y_vel, x_vel)
+                                fail_vel = fail_action[2:4]
+                                fail_loc = (fail_pos[0], fail_pos[1], fail_vel[0], fail_vel[1])
                                 fail_val = v_last[fail_loc]
 
                                 # Calculate the expected value of the possible outcomes
