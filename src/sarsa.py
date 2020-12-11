@@ -1,4 +1,4 @@
-"""Implements the Value Iteration algorithm."""
+"""Implements the SARSA algorithm."""
 
 from src.race import *
 from copy import deepcopy
@@ -6,9 +6,9 @@ import numpy as np
 from itertools import product
 
 
-class ValueIteration(Race):
+class QLearning(Race):
 
-    """Implements the Value Iteration algorithm for reinforcement learning.
+    """Implements the SARSA algorithm for reinforcement learning.
 
     Attributes
     ----------
@@ -96,12 +96,12 @@ class ValueIteration(Race):
                          verbose)
 
     def find_policy(self, gen_learn_curve):
-        """Finds a policy using the value iteration algorithm
+        """Finds a policy using the SARSA algorithm
 
         Returns
         -------
         policy : np.array
-            Policy found by Value Iteration
+            Policy found by SARSA
 
         gen_learn_curve : bool
             Whether to generate learning curve data
@@ -123,61 +123,13 @@ class ValueIteration(Race):
             if self.verbose:
                 print(f'\nEpoch = {t}')
 
-            # For all s in S
-            for y_pos in range(v.shape[0]):
-                for x_pos in range(v.shape[1]):
-
-                    # Fill wall points with crash cost
-                    if self.track.get_point((y_pos, x_pos)) == '#':
-                        v[y_pos, x_pos, :, :] = self.crash_cost
-                        continue
-
-                    for y_vel in self.velocity_range:
-                        for x_vel in self.velocity_range:
-                            loc = (y_pos, x_pos, y_vel, x_vel)
-
-                            # For all a in A:
-                            for idx_act, accel in enumerate(self.poss_actions):
-
-                                # Generate an action
-                                pos = (y_pos, x_pos)
-                                vel = (y_vel, x_vel)
-                                action = self.generate_action(pos, vel, accel)
-                                pos_new = action[0:2]
-                                vel_new = action[2:4]
-
-                                if self.check_trajectory(pos, pos_new, 'F'):
-                                    rew = self.fin_cost
-                                else:
-                                    rew = self.track_cost
-
-                                # Get the values associated with the possible
-                                # outcome, if it succeeds
-                                loc_new = (
-                                    pos_new[0], pos_new[1], vel_new[0], vel_new[1])
-                                val_succ = v[loc_new]
-
-                                # Find value if the action fails
-                                fail_action = self.generate_action(pos, vel, (0, 0))
-                                fail_pos = fail_action[0:2]
-                                fail_vel = fail_action[2:4]
-                                fail_loc = (
-                                    fail_pos[0], fail_pos[1], fail_vel[0], fail_vel[1])
-                                fail_val = v_last[fail_loc]
-
-                                # Calculate the expected value of the possible outcomes
-                                sum_poss = (self.accel_succ_prob * val_succ) + \
-                                    (((1-self.accel_succ_prob)) * (fail_val))
-
-                                # Get Q(s, a)
-                                loc_act = (y_pos, x_pos, y_vel, x_vel, idx_act)
-                                q_s_a[loc_act] = rew + (self.gamma * sum_poss)
-
-                            # Find the best Q
-                            pi_loc = np.argmax(q_s_a[loc])
-                            policy[loc] = self.poss_actions[pi_loc]
-                            loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
-                            v[loc] = q_s_a[loc_q]
+            """
+            # Find the best Q
+            pi_loc = np.argmax(q_s_a[loc])
+            policy[loc] = self.poss_actions[pi_loc]
+            loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
+            v[loc] = q_s_a[loc_q]
+            """
 
             # Collect current performance for learning curve
             if gen_learn_curve:
@@ -213,7 +165,7 @@ class ValueIteration(Race):
             Learned policy
         """
 
-        assert type(gen_learn_curve) is bool, 'Must be boolean '
+        assert type(gen_learn_curve) is bool, 'Must be boolean'
 
         # Generate the set of possible acceleration actions in all directions
         self.poss_actions = list(product(self.accel, repeat=2))
