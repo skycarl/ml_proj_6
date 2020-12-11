@@ -123,6 +123,7 @@ class ValueIteration():
                            len(self.velocity_range),
                            len(self.velocity_range)))
 
+        states[self.track.finish[0], self.track.finish[1], :, :] = -self.fin_cost
 
         return states
 
@@ -164,6 +165,8 @@ class ValueIteration():
                           len(self.velocity_range),
                           len(self.velocity_range),
                           len(self.poss_actions)))
+
+        q_s_a[self.track.finish[0], self.track.finish[1], :, :, :] = -self.fin_cost
         
         return q_s_a
 
@@ -409,22 +412,13 @@ class ValueIteration():
 
         converged = False
         t = 0
-        # last_point = self.track.start
 
         while not converged:
             t += 1
             v_last = deepcopy(v)
 
             if self.verbose:
-                # os.system('clear')
                 print(f'\nEpoch = {t}')
-                # self.track.show()
-
-            # TODO testing, maybe remove
-            v[self.track.finish[0], self.track.finish[1], :, :] = self.fin_cost
-
-            # TODO trying with q_s_a, too
-            q_s_a[self.track.finish[0], self.track.finish[1], :, :, :] = self.fin_cost
 
             # For all s in S
             for y_pos in range(v.shape[0]):
@@ -438,17 +432,6 @@ class ValueIteration():
                     for y_vel in self.velocity_range:
                         for x_vel in self.velocity_range:
                             loc = (y_pos, x_pos, y_vel, x_vel)
-
-                            """
-                            # Fill wall points with crash cost
-                            if self.track.get_point((y_pos, x_pos)) == '#':
-                                v[loc] = self.crash_cost
-                                continue  # TODO refactor this to put in 2nd loop down
-                            """
-
-                            # Get the value of the current location
-                            # for usage later
-                            #fail_val = v[loc]
 
                             # For all a in A:
                             for idx_act, accel in enumerate(self.poss_actions):
@@ -467,32 +450,6 @@ class ValueIteration():
                                     rew = self.fin_cost
                                 else:
                                     rew = self.track_cost
-
-                                
-
-                                """
-                                # See what this action causes
-                                # Outcome 1: it crashes
-                                if self.__check_trajectory(pos, pos_new, '#'):
-                                    rew = self.crash_cost
-                                    vel = (0, 0)
-
-                                    # Crash behavior depends on parameter
-                                    if self.bad_crash:
-                                        pos_new = self.track.start
-                                    else:
-                                        traj = self.__get_trajectory(pos, pos_new)
-                                        pos_new = self.__nearest_point(pos_new)
-
-                                # Outcome 2: it crosses the finish line
-                                elif self.__check_trajectory(pos, pos_new, 'F'):
-                                    rew = self.fin_cost
-
-                                # Outcome 3: it lands on the track
-                                else:
-                                    rew = self.track_cost
-                                """
-                                
 
                                 # Get the values associated with the possible
                                 # outcome, if it succeeds
@@ -518,7 +475,6 @@ class ValueIteration():
                             policy[loc] = self.poss_actions[pi_loc]
                             loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
                             v[loc] = q_s_a[loc_q]
-                            # TODO why are the values not changing as we get closer to the finish line, like the example is?
 
             # TODO delete this if it's not right
             # TODO update this for vertical case??
