@@ -197,9 +197,6 @@ class QLearning(Race):
         while not converged:
             t += 1
             last_iter_perf = perf
-
-            # TODO: need to decay learning rate?
-
             q_s_a[self.track.finish[0], self.track.finish[1], :, :, :] = self.fin_cost
 
             # Initialize s randomly
@@ -264,7 +261,7 @@ class QLearning(Race):
             if self.verbose:
                 print(f'Average performance = {perf}')
 
-            if np.abs(last_iter_perf - perf) < self.tol:
+            if (np.abs(last_iter_perf - perf) < self.tol) and (perf < self.max_iter):
                 perf_history.append(1)
             else:
                 perf_history.append(0)
@@ -307,6 +304,6 @@ class QLearning(Race):
 
         if gen_learn_curve:
             np.save(
-                f'Learn_curve_{self.track.name}_{self.gamma}.npy', self.learn_curve)
+                f'Q_Learn_curve_{self.track.name}_{self.gamma}.npy', self.learn_curve)
 
         return self.policy
