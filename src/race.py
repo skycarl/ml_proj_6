@@ -37,6 +37,7 @@ class Race(ABC):
                  err_dec=None,
                  episode_steps=None,
                  eps=None,
+                 k_decay=None,
                  bad_crash=False,
                  velocity_range=(-5, 5),
                  accel_succ_prob=0.8,
@@ -69,6 +70,9 @@ class Race(ABC):
 
         eps : float
             Epsilon for epsilon-greedy search
+
+        k_decay : float
+            Decay parameter
 
         bad_crash : bool, optional
             Whether to return to starting line when a crash
@@ -107,6 +111,7 @@ class Race(ABC):
         self.eta = eta
         self.err_dec = err_dec
         self.eps = eps
+        self.k_decay = k_decay
         self.episode_steps = episode_steps
         self.bad_crash = bad_crash
         self.velocity_range = range(velocity_range[0], velocity_range[1]+1)
