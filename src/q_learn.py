@@ -34,6 +34,7 @@ class QLearning(Race):
                  episode_steps=10,
                  err_dec=100,
                  eps=0.3,
+                 k_decay=0.00001,
                  bad_crash=False,
                  velocity_range=(-5, 5),
                  accel_succ_prob=0.8,
@@ -66,6 +67,9 @@ class QLearning(Race):
 
         eps : float
             Epsilon for epsilon-greedy search
+
+        k_decay : float
+            Decay parameter
 
         bad_crash : bool, optional
             Whether to return to starting line when a crash
@@ -105,6 +109,7 @@ class QLearning(Race):
                          episode_steps=episode_steps,
                          err_dec=err_dec,
                          eps=eps,
+                         k_decay=k_decay,
                          bad_crash=bad_crash,
                          velocity_range=velocity_range,
                          accel_succ_prob=accel_succ_prob,
@@ -186,6 +191,8 @@ class QLearning(Race):
         self.learn_curve = []
         perf_history = []
         perf = np.inf
+        eta = deepcopy(self.eta)
+        epsilon = deepcopy(self.eps)
 
         while not converged:
             t += 1
@@ -212,11 +219,17 @@ class QLearning(Race):
             if self.verbose:
                 print(f'\nEpisode {t}')
 
+            # Decay epsilon
+            if epsilon is not None:
+                # epsilon *= (1.0 / (1.0 + self.k_decay * t))
+                epsilon = 1 * np.exp(-self.k_decay*t)
+                print(f'epsilon = {epsilon:.4f}')
+
             # For each episode
             for _ in range(self.episode_steps):
 
                 # Epsilon-greedy search
-                if np.random.random() < self.eps:
+                if np.random.random() < epsilon:
                     # Randomly choose an action
                     act_loc = np.random.randint(0, len(self.poss_actions)-1)
                 else:
