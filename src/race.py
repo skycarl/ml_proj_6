@@ -379,10 +379,32 @@ class Race(ABC):
         """Abstract method for finding a policy"""
         raise NotImplementedError('There must be a find_policy method in the child class')
 
-    @abstractmethod
     def train(self, gen_learn_curve=False):
-        """Abstract method for training"""
-        raise NotImplementedError('There must be a train() method in the child class')
+        """Develops a policy with the Value Iteration algorithm
+
+        Parameters
+        ----------
+        gen_learn_curve : bool
+            Whether to generate learning curve data
+
+        Returns
+        -------
+        np.array
+            Learned policy
+        """
+
+        assert type(gen_learn_curve) is bool, 'Must be boolean '
+
+        # Generate the set of possible acceleration actions in all directions
+        self.poss_actions = list(product(self.accel, repeat=2))
+
+        self.policy = self.find_policy(gen_learn_curve)
+
+        if gen_learn_curve:
+            np.save(
+                f'Learn_curve_{self.track.name}_{self.gamma}.npy', self.learn_curve)
+
+        return self.policy
 
     def race(self, policy=None, max_race_steps=300, vis=True):
         """Runs a time trial with the trained policy
