@@ -33,8 +33,10 @@ class Race(ABC):
     def __init__(self,
                  track,
                  gamma,
-                 learning_rate=None,
+                 eta=None,
+                 err_dec=None,
                  episode_steps=None,
+                 eps=None,
                  bad_crash=False,
                  velocity_range=(-5, 5),
                  accel_succ_prob=0.8,
@@ -54,6 +56,19 @@ class Race(ABC):
 
         gamma : float
             Discount rate
+
+        eta : float
+            Learning rate
+
+        episode_steps : int
+            Number of steps per episode
+
+        err_dec : int
+            Number of steps for performance to stay the same (per `tol`) to
+            consider training to have converged
+
+        eps : float
+            Epsilon for epsilon-greedy search
 
         bad_crash : bool, optional
             Whether to return to starting line when a crash
@@ -89,7 +104,9 @@ class Race(ABC):
         """
 
         self.track = track
-        self.learning_rate = learning_rate
+        self.eta = eta
+        self.err_dec = err_dec
+        self.eps = eps
         self.episode_steps = episode_steps
         self.bad_crash = bad_crash
         self.velocity_range = range(velocity_range[0], velocity_range[1]+1)
@@ -123,22 +140,10 @@ class Race(ABC):
 
         return states
 
+    @abstractmethod
     def init_policy(self):
-        """Initialize the policy to arbitrary (zero) values. States are
-        position (x, y) and velocity at each position (v_x, v_y)
-
-        Returns
-        -------
-        np.array
-            Shape is (rows, cols, velocity_range, velocity_range, 2)
-        """
-
-        pol = np.zeros((self.track.dims[0],
-                        self.track.dims[1],
-                        len(self.velocity_range),
-                        len(self.velocity_range)), dtype=(int, 2))
-
-        return pol
+        """Abstract method for initializing policy array"""
+        raise NotImplementedError('There must be a init_policy method in the child class')
 
     @abstractmethod
     def init_q(self):

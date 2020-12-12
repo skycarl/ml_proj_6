@@ -113,6 +113,23 @@ class ValueIteration(Race):
 
         return q_s_a
 
+    def init_policy(self):
+        """Initialize the policy to arbitrary (zero) values. States are
+        position (x, y) and velocity at each position (v_x, v_y)
+
+        Returns
+        -------
+        np.array
+            Shape is (rows, cols, velocity_range, velocity_range, 2)
+        """
+
+        pol = np.zeros((self.track.dims[0],
+                        self.track.dims[1],
+                        len(self.velocity_range),
+                        len(self.velocity_range)), dtype=(int, 2))
+
+        return pol
+
     def find_policy(self, gen_learn_curve):
         """Finds a policy using the value iteration algorithm
 
