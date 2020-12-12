@@ -30,6 +30,7 @@ class ValueIteration(Race):
     def __init__(self,
                  track,
                  gamma,
+                 train_race_steps=100,
                  bad_crash=False,
                  velocity_range=(-5, 5),
                  accel_succ_prob=0.8,
@@ -49,6 +50,10 @@ class ValueIteration(Race):
 
         gamma : float
             Discount rate
+
+        train_race_steps : int
+            Max number of racing steps to use while assessing performance
+            during training
 
         bad_crash : bool, optional
             Whether to return to starting line when a crash
@@ -84,6 +89,7 @@ class ValueIteration(Race):
         """
         super().__init__(track=track,
                          gamma=gamma,
+                         train_race_steps=train_race_steps,
                          bad_crash=bad_crash,
                          velocity_range=velocity_range,
                          accel_succ_prob=accel_succ_prob,
@@ -216,7 +222,7 @@ class ValueIteration(Race):
 
             # Collect current performance for learning curve
             if gen_learn_curve:
-                races = self.evaluate(policy=policy)
+                races = self.evaluate(policy=policy, max_race_steps=self.train_race_steps)
                 self.learn_curve.append(np.mean(races))
 
             # Check if converged

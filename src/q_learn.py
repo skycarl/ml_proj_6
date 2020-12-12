@@ -35,6 +35,7 @@ class QLearning(Race):
                  err_dec=100,
                  eps=0.3,
                  k_decay=0.00001,
+                 train_race_steps=100,
                  bad_crash=False,
                  velocity_range=(-5, 5),
                  accel_succ_prob=0.8,
@@ -70,6 +71,10 @@ class QLearning(Race):
 
         k_decay : float
             Decay parameter
+
+        train_race_steps : int
+            Max number of racing steps to use while assessing performance
+            during training
 
         bad_crash : bool, optional
             Whether to return to starting line when a crash
@@ -110,6 +115,7 @@ class QLearning(Race):
                          err_dec=err_dec,
                          eps=eps,
                          k_decay=k_decay,
+                         train_race_steps=train_race_steps,
                          bad_crash=bad_crash,
                          velocity_range=velocity_range,
                          accel_succ_prob=accel_succ_prob,
@@ -257,7 +263,7 @@ class QLearning(Race):
             policy[state] = self.poss_actions[pi_loc]
 
             # Check if converged
-            perf = np.mean(self.evaluate(policy=policy))
+            perf = np.mean(self.evaluate(policy=policy, max_race_steps=self.train_race_steps))
             if self.verbose:
                 print(f'Average performance = {perf}')
 

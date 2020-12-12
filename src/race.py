@@ -38,6 +38,7 @@ class Race(ABC):
                  episode_steps=None,
                  eps=None,
                  k_decay=None,
+                 train_race_steps=100,
                  bad_crash=False,
                  velocity_range=(-5, 5),
                  accel_succ_prob=0.8,
@@ -73,6 +74,10 @@ class Race(ABC):
 
         k_decay : float
             Decay parameter
+
+        train_race_steps : int
+            Max number of racing steps to use while assessing performance
+            during training
 
         bad_crash : bool, optional
             Whether to return to starting line when a crash
@@ -113,6 +118,7 @@ class Race(ABC):
         self.eps = eps
         self.k_decay = k_decay
         self.episode_steps = episode_steps
+        self.train_race_steps = train_race_steps
         self.bad_crash = bad_crash
         self.velocity_range = range(velocity_range[0], velocity_range[1]+1)
         self.accel_succ_prob = accel_succ_prob
@@ -398,7 +404,6 @@ class Race(ABC):
             Number of moves that the time trial was completed in
 
         """
-        self.max_race_steps = max_race_steps
 
         if policy is None:
             policy = self.policy
@@ -440,7 +445,7 @@ class Race(ABC):
 
                 if vis:
                     print(
-                        f'Failed to find finish in less than {self.max_race_steps} steps')
+                        f'Failed to find finish in less than {max_race_steps} steps')
 
         if vis:
             os.system('clear')
@@ -449,7 +454,7 @@ class Race(ABC):
 
         return steps
 
-    def evaluate(self, n_races=20, policy=None):
+    def evaluate(self, n_races=20, policy=None, max_race_steps=300):
         """Evaluates a policy by running n races.
 
         Parameters
@@ -459,6 +464,9 @@ class Race(ABC):
 
         policy : np.array
             Policy to use to race; used to speed up experimentation
+
+        max_race_steps : int
+            Max number of steps to use for each race
 
         Returns
         -------
@@ -472,6 +480,8 @@ class Race(ABC):
         results = [None]*n_races
 
         for race in range(n_races):
-            results[race] = self.race(vis=False, policy=policy)
+            results[race] = self.race(vis=False,
+                                      policy=policy,
+                                      max_race_steps=max_race_steps)
 
         return results
