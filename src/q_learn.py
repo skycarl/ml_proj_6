@@ -1,9 +1,9 @@
 """Implements the Q-learning algorithm."""
 
 from src.race import *
-from copy import deepcopy
 import numpy as np
 from itertools import product
+from copy import deepcopy
 
 
 class QLearning(Race):
@@ -30,6 +30,10 @@ class QLearning(Race):
     def __init__(self,
                  track,
                  gamma,
+                 eta,
+                 episode_steps=10,
+                 err_dec=100,
+                 eps=0.3,
                  bad_crash=False,
                  velocity_range=(-5, 5),
                  accel_succ_prob=0.8,
@@ -37,7 +41,7 @@ class QLearning(Race):
                  crash_cost=10,
                  track_cost=1,
                  fin_cost=0,
-                 max_iter=50,
+                 max_iter=500,
                  tol=0.001,
                  verbose=True):
         """Initializes an object.
@@ -49,6 +53,19 @@ class QLearning(Race):
 
         gamma : float
             Discount rate
+
+        eta : float
+            Learning rate
+
+        episode_steps : int
+            Number of steps per episode
+
+        err_dec : int
+            Number of steps for performance to stay the same (per `tol`) to
+            consider training to have converged
+
+        eps : float
+            Epsilon for epsilon-greedy search
 
         bad_crash : bool, optional
             Whether to return to starting line when a crash
@@ -82,18 +99,71 @@ class QLearning(Race):
             Verbosity switch
 
         """
-        super().__init__(track,
-                         gamma,
-                         bad_crash,
-                         velocity_range,
-                         accel_succ_prob,
-                         accel,
-                         crash_cost,
-                         track_cost,
-                         fin_cost,
-                         max_iter,
-                         tol,
-                         verbose)
+        super().__init__(track=track,
+                         gamma=gamma,
+                         eta=eta,
+                         episode_steps=episode_steps,
+                         err_dec=err_dec,
+                         eps=eps,
+                         bad_crash=bad_crash,
+                         velocity_range=velocity_range,
+                         accel_succ_prob=accel_succ_prob,
+                         accel=accel,
+                         crash_cost=crash_cost,
+                         track_cost=track_cost,
+                         fin_cost=fin_cost,
+                         max_iter=max_iter,
+                         tol=tol,
+                         verbose=verbose)
+
+    def init_q(self):
+        """Initializes Q(s, a) of random values with finish line cost at the
+        finish locations
+
+        Returns
+        -------
+        np.array
+            Random Q(s, a) array; shape is (rows, cols, velocity_range,
+            velocity_range, possible acceleration options)
+        """
+
+        q_s_a = np.random.random((self.track.dims[0],
+                                  self.track.dims[1],
+                                  len(self.velocity_range),
+                                  len(self.velocity_range),
+                                  len(self.poss_actions)))
+
+        return q_s_a
+
+    def init_policy(self, q):
+        """Initialize the policy to arbitrary (zero) values. States are
+        position (x, y) and velocity at each position (v_x, v_y)
+
+        Parameters
+        ----------
+        q : np.array
+            Q(s, a) array, randomly initialized
+
+        Returns
+        -------
+        np.array
+            Shape is (rows, cols, velocity_range, velocity_range, 2)
+        """
+
+        pol = np.zeros((self.track.dims[0],
+                        self.track.dims[1],
+                        len(self.velocity_range),
+                        len(self.velocity_range)), dtype=(int, 2))
+
+        # Janky as heck
+        args = np.argmax(q, axis=4)
+        for idx_y in range(args.shape[0]):
+            for idx_x in range(args.shape[1]):
+                for idx_v_y in range(args.shape[2]):
+                    for idx_v_x in range(args.shape[3]):
+                        pol[idx_y, idx_x, idx_v_y, idx_v_x] = self.poss_actions[args[idx_y, idx_x, idx_v_y, idx_v_x]]
+
+        return pol
 
     def find_policy(self, gen_learn_curve):
         """Finds a policy using the Q-learning algorithm
@@ -107,43 +177,93 @@ class QLearning(Race):
             Whether to generate learning curve data
         """
 
-        # Initialize v, pi, and Q(s, a)
-        v = self.init_states()
-        policy = self.init_policy()
+        # Initialize Q(s, a) and policy
         q_s_a = self.init_q()
+        policy = self.init_policy(q_s_a)
 
         converged = False
         t = 0
         self.learn_curve = []
+        perf_history = []
+        perf = np.inf
 
         while not converged:
             t += 1
-            v_last = deepcopy(v)
+            last_iter_perf = perf
+
+            # TODO: need to decay learning rate?
+
+            q_s_a[self.track.finish[0], self.track.finish[1], :, :, :] = self.fin_cost
+
+            # Initialize s randomly
+            y_pos = np.random.randint(0, self.track.dims[0])
+            x_pos = np.random.randint(0, self.track.dims[1])
+            y_vel = np.random.randint(self.velocity_range[0], self.velocity_range[1])
+            x_vel = np.random.randint(self.velocity_range[0], self.velocity_range[1])
+            state = (y_pos, x_pos, y_vel, x_vel)
+
+            # Ignore if we've generated a wall or finish line
+            if self.track.get_point((y_pos, x_pos)) == '#':
+                continue
+
+            if self.track.get_point((y_pos, x_pos)) == 'F':
+                continue
 
             if self.verbose:
-                print(f'\nEpoch = {t}')
+                print(f'\nEpisode {t}')
 
-            """
-            # Find the best Q
-            pi_loc = np.argmax(q_s_a[loc])
-            policy[loc] = self.poss_actions[pi_loc]
-            loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
-            v[loc] = q_s_a[loc_q]
-            """
+            # For each episode
+            for _ in range(self.episode_steps):
+
+                # Epsilon-greedy search
+                if np.random.random() < self.eps:
+                    # Randomly choose an action
+                    act_loc = np.random.randint(0, len(self.poss_actions)-1)
+                else:
+                    # Use the current Q(s, a) to determine an action
+                    act_loc = np.argmax(q_s_a[state])
+
+                # Generate an action
+                pos = (y_pos, x_pos)
+                vel = (y_vel, x_vel)
+                accel = self.poss_actions[act_loc]
+                new_state = self.generate_action(pos, vel, accel, race=True)
+
+                # See if we've crossed the finish line
+                if self.check_trajectory(pos, new_state[0:2], 'F'):
+                    rew = self.fin_cost
+                else:
+                    rew = self.track_cost
+
+                # Update Q(s, a) based on this action
+                q_loc = (y_pos, x_pos, y_vel, x_vel, act_loc)
+                q_s_a[q_loc] = q_s_a[q_loc] + self.eta * (rew + self.gamma * np.max(q_s_a[new_state]) - q_s_a[q_loc])
+
+                # s <-- s'
+                state = deepcopy(new_state)
+
+            # Update the policy
+            pi_loc = np.argmax(q_s_a[state])
+            policy[state] = self.poss_actions[pi_loc]
+
+            # Check if converged
+            perf = np.mean(self.evaluate(policy=policy))
+            if self.verbose:
+                print(f'Average performance = {perf}')
+
+            if np.abs(last_iter_perf - perf) < self.tol:
+                perf_history.append(1)
+            else:
+                perf_history.append(0)
+
+            last_n = perf_history[-self.err_dec:]
+            if all(x == 1 for x in last_n):
+                converged = True
+                print(f'Converged; average performance was within {self.tol} for last {self.err_dec} steps')
 
             # Collect current performance for learning curve
             if gen_learn_curve:
-                races = self.evaluate(policy=policy)
-                self.learn_curve.append(np.mean(races))
-
-            # Check if converged
-            max_delta_v = np.max(np.abs(v - v_last))
-            if self.verbose:
-                print(f'Current max_delta_v = {max_delta_v}')
-
-            if max_delta_v < self.tol:
-                print('Stopped because training converged')
-                converged = True
+                self.learn_curve.append(perf)
 
             if t >= self.max_iter:
                 print(f'Stopped; max iters of {self.max_iter} reached')
