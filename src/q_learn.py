@@ -237,8 +237,8 @@ class QLearning(Race):
                     act_loc = np.argmax(q_s_a[state])
 
                 # Generate an action
-                pos = (y_pos, x_pos)
-                vel = (y_vel, x_vel)
+                pos = state[0:2]
+                vel = state[2:4]
                 accel = self.poss_actions[act_loc]
                 new_state = self.generate_action(pos, vel, accel, race=True)
 
@@ -249,8 +249,8 @@ class QLearning(Race):
                     rew = self.track_cost
 
                 # Update Q(s, a) based on this action
-                q_loc = (y_pos, x_pos, y_vel, x_vel, act_loc)
-                q_s_a[q_loc] = q_s_a[q_loc] + self.eta * (rew + self.gamma * np.max(q_s_a[new_state]) - q_s_a[q_loc])
+                q_loc = (pos[0], pos[1], vel[0], vel[1], act_loc)
+                q_s_a[q_loc] = q_s_a[q_loc] + eta * (rew + self.gamma * np.max(q_s_a[new_state]) - q_s_a[q_loc])
 
                 # s <-- s'
                 state = deepcopy(new_state)
