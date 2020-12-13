@@ -192,12 +192,12 @@ class SARSA(QLearning):
                 print(f'epsilon = {epsilon:.4f}')
 
             # Epsilon-greedy search for first action
-                if np.random.random() < epsilon:
-                    # Randomly choose an action
-                    act_loc = np.random.randint(0, len(self.poss_actions)-1)
-                else:
-                    # Use the current Q(s, a) to determine an action
-                    act_loc = np.argmax(q_s_a[state])
+            if np.random.random() < epsilon:
+                # Randomly choose an action
+                act_loc = np.random.randint(0, len(self.poss_actions)-1)
+            else:
+                # Use the current Q(s, a) to determine an action
+                act_loc = np.argmax(q_s_a[state])
 
             # For each episode
             for _ in range(self.episode_steps):
