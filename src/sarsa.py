@@ -178,16 +178,16 @@ class SARSA(QLearning):
                 epsilon = 1 * np.exp(-self.k_decay*t)
                 print(f'epsilon = {epsilon:.4f}')
 
-            # For each episode
-            for _ in range(self.episode_steps):
-
-                # Epsilon-greedy search
+            # Epsilon-greedy search for first action
                 if np.random.random() < epsilon:
                     # Randomly choose an action
                     act_loc = np.random.randint(0, len(self.poss_actions)-1)
                 else:
                     # Use the current Q(s, a) to determine an action
                     act_loc = np.argmax(q_s_a[state])
+
+            # For each episode
+            for _ in range(self.episode_steps):
 
                 # Generate an action
                 pos = state[0:2]
@@ -201,12 +201,25 @@ class SARSA(QLearning):
                 else:
                     rew = self.track_cost
 
-                # Update Q(s, a) based on this action
-                q_loc = (pos[0], pos[1], vel[0], vel[1], act_loc)
-                q_s_a[q_loc] = q_s_a[q_loc] + eta * (rew + self.gamma * np.max(q_s_a[new_state]) - q_s_a[q_loc])
+                # Epsilon-greedy search for second action
+                if np.random.random() < epsilon:
+                    # Randomly choose an action
+                    act_loc_new = np.random.randint(0, len(self.poss_actions)-1)
+                else:
+                    # Use the current Q(s, a) to determine an action
+                    act_loc_new = np.argmax(q_s_a[state])
 
-                # s <-- s'
+                accel_prime = self.poss_actions[act_loc_new]
+                new_state_prime = self.generate_action(pos, vel, accel_prime, race=True)
+
+                # Update Q(s, a) based on this action
+                q_loc_prime = (new_state[0], new_state[1], new_state_prime[2], new_state_prime[3], act_loc_new)
+                q_loc = (pos[0], pos[1], vel[0], vel[1], act_loc)
+                q_s_a[q_loc] = q_s_a[q_loc] + eta * (rew + self.gamma * q_s_a[q_loc_prime] - q_s_a[q_loc])
+
+                # s <-- s'; a <-- a'
                 state = deepcopy(new_state)
+                act_loc = deepcopy(act_loc_new)
 
             # Update the policy
             pi_loc = np.argmax(q_s_a[state])
