@@ -251,7 +251,7 @@ class Race(ABC):
 
             # Generate possibilities in random order to reduce the chances
             # of getting stuck
-            poss = (-rad, rad)
+            poss = (-rad, rad, 0)
             circle = list(product(poss, repeat=2))
             np.random.shuffle(circle)
 
