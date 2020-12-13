@@ -375,17 +375,17 @@ class Race(ABC):
         return new_pt + new_vel
 
     @abstractmethod
-    def find_policy(self, gen_learn_curve):
+    def find_policy(self, learn_curve_str):
         """Abstract method for finding a policy"""
         raise NotImplementedError('There must be a find_policy method in the child class')
 
-    def train(self, gen_learn_curve=False):
+    def train(self, learn_curve_str=None):
         """Develops a policy with the Value Iteration algorithm
 
         Parameters
         ----------
-        gen_learn_curve : bool
-            Whether to generate learning curve data
+        learn_curve_str : string
+            Name for the learning curve filename
 
         Returns
         -------
@@ -393,16 +393,14 @@ class Race(ABC):
             Learned policy
         """
 
-        assert type(gen_learn_curve) is bool, 'Must be boolean '
-
         # Generate the set of possible acceleration actions in all directions
         self.poss_actions = list(product(self.accel, repeat=2))
 
-        self.policy = self.find_policy(gen_learn_curve)
+        self.policy = self.find_policy(learn_curve_str)
 
-        if gen_learn_curve:
+        if learn_curve_str is not None:
             np.save(
-                f'Learn_curve_{self.track.name}_{self.gamma}.npy', self.learn_curve)
+                f'Learn_curve_{learn_curve_str}.npy', self.learn_curve)
 
         return self.policy
 

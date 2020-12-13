@@ -135,7 +135,7 @@ class ValueIteration(Race):
 
         return pol
 
-    def find_policy(self, gen_learn_curve):
+    def find_policy(self, learn_curve_str):
         """Finds a policy using the value iteration algorithm
 
         Returns
@@ -143,7 +143,7 @@ class ValueIteration(Race):
         policy : np.array
             Policy found by Value Iteration
 
-        gen_learn_curve : bool
+        learn_curve_str : bool
             Whether to generate learning curve data
         """
 
@@ -220,7 +220,7 @@ class ValueIteration(Race):
                             v[loc] = q_s_a[loc_q]
 
             # Collect current performance for learning curve
-            if gen_learn_curve:
+            if learn_curve_str:
                 races = self.evaluate(policy=policy, max_race_steps=self.train_race_steps)
                 self.learn_curve.append(np.mean(races))
 

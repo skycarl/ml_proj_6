@@ -126,7 +126,7 @@ class SARSA(QLearning):
                          tol=tol,
                          verbose=verbose)
 
-    def find_policy(self, gen_learn_curve):
+    def find_policy(self, learn_curve_str):
         """Finds a policy using the SARSA algorithm
 
         Returns
@@ -134,7 +134,7 @@ class SARSA(QLearning):
         policy : np.array
             Policy found by SARSA
 
-        gen_learn_curve : bool
+        learn_curve_str : bool
             Whether to generate learning curve data
         """
 

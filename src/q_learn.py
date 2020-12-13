@@ -175,7 +175,7 @@ class QLearning(Race):
 
         return pol
 
-    def find_policy(self, gen_learn_curve):
+    def find_policy(self, learn_curve_str):
         """Finds a policy using the Q-learning algorithm
 
         Returns
@@ -183,7 +183,7 @@ class QLearning(Race):
         policy : np.array
             Policy found by Q-learning
 
-        gen_learn_curve : bool
+        learn_curve_str : bool
             Whether to generate learning curve data
         """
 
@@ -277,7 +277,7 @@ class QLearning(Race):
                 print(f'Converged; average performance was within {self.tol} for last {self.err_dec} steps')
 
             # Collect current performance for learning curve
-            if gen_learn_curve:
+            if learn_curve_str:
                 self.learn_curve.append(perf)
 
             if t >= self.max_iter:
