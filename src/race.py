@@ -1,7 +1,6 @@
 """Implements common functionality for the racetrack problem."""
 
-from abc import ABC, abstractclassmethod, abstractmethod
-from copy import deepcopy
+from abc import ABC, abstractmethod
 import os
 import numpy as np
 from itertools import product
@@ -133,6 +132,10 @@ class Race(ABC):
 
         assert gamma >= 0 and gamma < 1, 'Discount rate must be between 0 and 1'
         self.gamma = gamma
+
+        # Create dir for arrays
+        if not os.path.exists('arrays'):
+            os.makedirs('arrays')
 
     def init_states(self):
         """Initialize the states to arbitrary (zero) values. States are

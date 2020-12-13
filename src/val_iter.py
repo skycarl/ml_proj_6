@@ -162,8 +162,8 @@ class ValueIteration(Race):
 
             perf = np.mean(self.evaluate(policy=policy, max_race_steps=self.train_race_steps))
             self.learn_curve.append(perf)
-            np.save(f'policy_{learn_curve_str}_{t}.npy', policy)
-            np.save(f'learn_curve_{learn_curve_str}_{t}.npy', self.learn_curve)
+            np.save(f'arrays/policy_{learn_curve_str}_{t}.npy', policy)
+            np.save(f'arrays/learn_curve_{learn_curve_str}_{t}.npy', self.learn_curve)
 
             if self.verbose:
                 print(f'Average performance = {perf}')

@@ -162,8 +162,8 @@ class SARSA(QLearning):
 
             # Export the policy and learning curve every 10k iters
             if t % 10000 == 0:
-                np.save(f'policy_{learn_curve_str}_{t}.npy', policy)
-                np.save(f'learn_curve_{learn_curve_str}_{t}.npy', self.learn_curve)
+                np.save(f'arrays/policy_{learn_curve_str}_{t}.npy', policy)
+                np.save(f'arrays/learn_curve_{learn_curve_str}_{t}.npy', self.learn_curve)
 
             # Initialize s randomly
             y_pos = np.random.randint(0, self.track.dims[0])
