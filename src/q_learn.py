@@ -209,8 +209,8 @@ class QLearning(Race):
                 perf = np.mean(self.evaluate(policy=policy, max_race_steps=self.train_race_steps))
                 self.learn_curve.append(perf)
 
-            # Export the policy and learning curve every 10k iters
-            if t % 10000 == 0:
+            # Export the policy and learning curve every 100k iters
+            if t % 100000 == 0:
                 np.save(f'arrays/policy_{learn_curve_str}_{t}.npy', policy)
                 np.save(f'arrays/learn_curve_{learn_curve_str}_{t}.npy', self.learn_curve)
 
