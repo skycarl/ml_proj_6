@@ -160,6 +160,14 @@ class ValueIteration(Race):
             t += 1
             v_last = deepcopy(v)
 
+            perf = np.mean(self.evaluate(policy=policy, max_race_steps=self.train_race_steps))
+            self.learn_curve.append(perf)
+            np.save(f'policy_{learn_curve_str}_{t}.npy', policy)
+            np.save(f'learn_curve_{learn_curve_str}_{t}.npy', self.learn_curve)
+
+            if self.verbose:
+                print(f'Average performance = {perf}')
+
             if self.verbose:
                 print(f'\nEpoch = {t}')
 
@@ -218,11 +226,6 @@ class ValueIteration(Race):
                             policy[loc] = self.poss_actions[pi_loc]
                             loc_q = (y_pos, x_pos, y_vel, x_vel, pi_loc)
                             v[loc] = q_s_a[loc_q]
-
-            # Collect current performance for learning curve
-            if learn_curve_str:
-                races = self.evaluate(policy=policy, max_race_steps=self.train_race_steps)
-                self.learn_curve.append(np.mean(races))
 
             # Check if converged
             max_delta_v = np.max(np.abs(v - v_last))

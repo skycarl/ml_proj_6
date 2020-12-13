@@ -201,8 +201,18 @@ class QLearning(Race):
 
         while not converged:
             t += 1
-            last_iter_perf = perf
+            last_iter_perf = deepcopy(perf)
             q_s_a[self.track.finish[0], self.track.finish[1], :, :, :] = self.fin_cost
+
+            # Check performance every 1k iters
+            if t % 1000 == 0:
+                perf = np.mean(self.evaluate(policy=policy, max_race_steps=self.train_race_steps))
+                self.learn_curve.append(perf)
+
+            # Export the policy and learning curve every 10k iters
+            if t % 10000 == 0:
+                np.save(f'policy_{learn_curve_str}_{t}.npy', policy)
+                np.save(f'learn_curve_{learn_curve_str}_{t}.npy', self.learn_curve)
 
             # Initialize s randomly
             y_pos = np.random.randint(0, self.track.dims[0])
@@ -217,6 +227,9 @@ class QLearning(Race):
 
             if self.track.get_point((y_pos, x_pos)) == 'F':
                 continue
+
+            if self.verbose:
+                print(f'Average performance = {perf}')
 
             if self.verbose:
                 print(f'\nEpisode {t}')
@@ -259,12 +272,7 @@ class QLearning(Race):
 
             # Update the policy
             pi_loc = np.argmax(q_s_a[state])
-            policy[state] = self.poss_actions[pi_loc]
-
-            # Check if converged
-            perf = np.mean(self.evaluate(policy=policy, max_race_steps=self.train_race_steps))
-            if self.verbose:
-                print(f'Average performance = {perf}')
+            policy[state] = self.poss_actions[pi_loc]       
 
             if (np.abs(last_iter_perf - perf) < self.tol) and (perf < self.max_iter):
                 perf_history.append(1)
@@ -275,10 +283,6 @@ class QLearning(Race):
             if all(x == 1 for x in last_n):
                 converged = True
                 print(f'Converged; average performance was within {self.tol} for last {self.err_dec} steps')
-
-            # Collect current performance for learning curve
-            if learn_curve_str:
-                self.learn_curve.append(perf)
 
             if t >= self.max_iter:
                 print(f'Stopped; max iters of {self.max_iter} reached')
