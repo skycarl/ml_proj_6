@@ -274,7 +274,7 @@ class QLearning(Race):
             pi_loc = np.argmax(q_s_a[state])
             policy[state] = self.poss_actions[pi_loc]       
 
-            if (np.abs(last_iter_perf - perf) < self.tol) and (perf < self.max_iter):
+            if (np.abs(last_iter_perf - perf) < self.tol) and (perf < self.train_race_steps):
                 perf_history.append(1)
             else:
                 perf_history.append(0)
