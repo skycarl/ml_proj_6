@@ -446,7 +446,7 @@ class Race(ABC):
                 os.system('clear')
                 print(f'Step: {steps}')
                 self.track.show(pos)
-                time.sleep(0.2)
+                time.sleep(0.3)
 
             # Get the acceleration
             acc = policy[pos + vel]
@@ -454,14 +454,27 @@ class Race(ABC):
             # Get the action that the policy dictates
             new_pos = self.generate_action(pos, vel, acc, race=True)
 
-            # Check if we've crossed the finish line or crashed
+            # Check if we've crossed the finish line
             finished = self.check_trajectory(pos, new_pos[0:2], 'F')
 
-            # Unpack the tuple for next iter
-            pos = new_pos[0:2]
-            vel = new_pos[2:4]
-            assert pos[0] >= 0, 'Row cannot be less than 0'
-            assert pos[1] >= 0, 'Column cannot be less than 0'
+            # See if a crash occurred
+            if self.check_trajectory(pos, new_pos[0:2], '#'):
+                vel = (0, 0)
+
+                # Crash behavior depends on parameter
+                if self.bad_crash:
+                    pos = self.track.start
+                else:
+                    traj = self.__get_trajectory(pos, new_pos[0:2])
+                    pos = self.__furthest_point_along_traj(traj)
+
+            else:
+
+                # Unpack the tuple for next iter
+                pos = new_pos[0:2]
+                vel = new_pos[2:4]
+                assert pos[0] >= 0, 'Row cannot be less than 0'
+                assert pos[1] >= 0, 'Column cannot be less than 0'            
 
             if steps > max_race_steps:
                 finished = True
