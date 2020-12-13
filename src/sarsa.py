@@ -220,10 +220,10 @@ class SARSA(QLearning):
                     act_loc_new = np.random.randint(0, len(self.poss_actions)-1)
                 else:
                     # Use the current Q(s, a) to determine an action
-                    act_loc_new = np.argmax(q_s_a[state])
+                    act_loc_new = np.argmax(q_s_a[new_state])
 
                 accel_prime = self.poss_actions[act_loc_new]
-                new_state_prime = self.generate_action(pos, vel, accel_prime, race=True)
+                new_state_prime = self.generate_action(new_state[0:2], new_state[2:4], accel_prime, race=True) # should pos, vel be new_state?
 
                 # Update Q(s, a) based on this action
                 q_loc_prime = (new_state[0], new_state[1], new_state_prime[2], new_state_prime[3], act_loc_new)
