@@ -9,6 +9,6 @@ track = Track('L-track.txt')
 race = QLearning(track, gamma=0.5, eta=None)
 
 # Race with the specified policy
-filename = 'L-track_test_Q_1mil.npy'
+filename = 'arrays/name_here.npy'
 policy = np.load(filename)
 race.race(policy=policy)
