@@ -1,2 +1,2 @@
 bresenham==0.2.1
-numpy==1.20.3
+numpy==1.21.0
